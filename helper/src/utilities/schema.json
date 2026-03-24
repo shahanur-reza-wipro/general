@@ -1,0 +1,482 @@
+[
+    {
+        "modelName": "Debtor",
+        "fields": [
+            {
+                "field": "Client Number",
+                "start": 1,
+                "length": 7,
+                "modelProperty": "ClientNumber",
+                "validationPattern": "",
+                "isMandatory": true
+            },
+            {
+                "field": "Client Agreement Number",
+                "start": 9,
+                "length": 3,
+                "modelProperty": "ClientAgreementNumber",
+                "validationPattern": "",
+                "isMandatory": true
+            },
+            {
+                "field": "Agreement Currency",
+                "start": 13,
+                "length": 3,
+                "modelProperty": "AgreementCurrency",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor Number",
+                "start": 17,
+                "length": 10,
+                "modelProperty": "DebtorNumber",
+                "validationPattern": "",
+                "isMandatory": true
+            },
+            {
+                "field": "Account N umber",
+                "start": 28,
+                "length": 3,
+                "modelProperty": "AccountNumber",
+                "validationPattern": "",
+                "isMandatory": true
+            },
+            {
+                "field": "Account Currency",
+                "start": 32,
+                "length": 3,
+                "modelProperty": "AccountCurrency",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Client Name",
+                "start": 36,
+                "length": 40,
+                "modelProperty": "ClientName",
+                "validationPattern": "",
+                "isMandatory": true
+            },
+            {
+                "field": "Debtor Name",
+                "start": 77,
+                "length": 40,
+                "modelProperty": "DebtorName",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor Addr1",
+                "start": 118,
+                "length": 40,
+                "modelProperty": "DebtorAddr1",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor Addr2",
+                "start": 159,
+                "length": 40,
+                "modelProperty": "DebtorAddr2",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor Addr3",
+                "start": 200,
+                "length": 40,
+                "modelProperty": "DebtorAddr3"
+            },
+            {
+                "field": "Debtor City",
+                "start": 241,
+                "length": 40,
+                "modelProperty": "DebtorCity",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor Post Code",
+                "start": 282,
+                "length": 10,
+                "modelProperty": "DebtorPostCode",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor Country",
+                "start": 293,
+                "length": 2,
+                "modelProperty": "DebtorCountry",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Credit Controller",
+                "start": 296,
+                "length": 40,
+                "modelProperty": "CreditController",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "In Payment Bank Code",
+                "start": 337,
+                "length": 8,
+                "modelProperty": "InpaymentBankCode",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "In Payment Bank Account",
+                "start": 346,
+                "length": 8,
+                "modelProperty": "InpaymentBankAccount",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "In Payment IBAN Number",
+                "start": 355,
+                "length": 30,
+                "modelProperty": "InpaymentIbanNumber",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor Contact",
+                "start": 386,
+                "length": 30,
+                "modelProperty": "DebtorContact",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor STM email",
+                "start": 417,
+                "length": 60,
+                "modelProperty": "DebtorStmEmail",
+                "validationPattern": "[^@]+@[^@]+\\.[^@]+",
+                "isMandatory": false
+            },
+            {
+                "field": "Calls Opt Out",
+                "start": 478,
+                "length": 1,
+                "modelProperty": "CallsOptOut",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "STM Flag",
+                "start": 480,
+                "length": 1,
+                "modelProperty": "StmFlag",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "STM Run Day",
+                "start": 482,
+                "length": 2,
+                "modelProperty": "StmRunDay",
+                "validationPattern": "^\\d{2}$",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor Fax",
+                "start": 485,
+                "length": 30,
+                "modelProperty": "DebtorFax",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Customer Account Balance",
+                "start": 516,
+                "length": 20,
+                "modelProperty": "CustomerAccountBalance",
+                "validationPattern": "^-?\\d+(\\.\\d+)?$",
+                "isMandatory": true
+            },
+            {
+                "field": "Application Date",
+                "start": 537,
+                "length": 8,
+                "modelProperty": "ApplicationDate",
+                "validationPattern": "^\\d{2}/\\d{2}/\\d{2}$",
+                "isMandatory": true
+            },
+            {
+                "field": "Extract Date",
+                "start": 546,
+                "length": 8,
+                "modelProperty": "ExtractDate",
+                "validationPattern": "^\\d{2}/\\d{2}/\\d{2}$",
+                "isMandatory": true
+            },
+            {
+                "field": "Migration Reference",
+                "start": 555,
+                "length": 30,
+                "modelProperty": "MigrationReference",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Bank Name",
+                "start": 586,
+                "length": 70,
+                "modelProperty": "BankName",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Bank Address 1",
+                "start": 657,
+                "length": 50,
+                "modelProperty": "BankAddress1",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Bank Address 2",
+                "start": 708,
+                "length": 40,
+                "modelProperty": "BankAddress2",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Bank Address 3",
+                "start": 749,
+                "length": 40,
+                "modelProperty": "BankAddress3",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Bank City",
+                "start": 790,
+                "length": 40,
+                "modelProperty": "BankCity",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Bank State",
+                "start": 831,
+                "length": 40,
+                "modelProperty": "BankState",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Bank Postcode",
+                "start": 872,
+                "length": 12,
+                "modelProperty": "BankPostcode",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Assignment Due",
+                "start": 885,
+                "length": 1,
+                "modelProperty": "AssignmentDue",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Dunning Reminder",
+                "start": 887,
+                "length": 1,
+                "modelProperty": "DunningReminder",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Dunning Cycle Code",
+                "start": 889,
+                "length": 4,
+                "modelProperty": "DunningCycleCode",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "End Field",
+                "start": 894,
+                "length": 1,
+                "modelProperty": "EndField",
+                "validationPattern": "",
+                "isMandatory": true
+            }
+        ]
+    },
+    {
+        "modelName": "Transaction",
+        "fields": [
+            {
+                "field": "Client Number",
+                "start": 1,
+                "length": 7,
+                "modelProperty": "ClientNumber",
+                "validationPattern": "",
+                "isMandatory": true
+            },
+            {
+                "field": "Client Agreement Number",
+                "start": 9,
+                "length": 3,
+                "modelProperty": "ClientAgreementNumber",
+                "validationPattern": "",
+                "isMandatory": true
+            },
+            {
+                "field": "Agreement Currency",
+                "start": 13,
+                "length": 3,
+                "modelProperty": "AgreementCurrency",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Debtor Number",
+                "start": 17,
+                "length": 10,
+                "modelProperty": "DebtorNumber",
+                "validationPattern": "",
+                "isMandatory": true
+            },
+            {
+                "field": "Account Number",
+                "start": 28,
+                "length": 3,
+                "modelProperty": "AccountNumber",
+                "validationPattern": "",
+                "isMandatory": true
+            },
+            {
+                "field": "Account Currency",
+                "start": 32,
+                "length": 3,
+                "modelProperty": "AccountCurrency",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Item Number",
+                "start": 36,
+                "length": 7,
+                "modelProperty": "ItemNumber",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Document Date",
+                "start": 44,
+                "length": 8,
+                "modelProperty": "DocumentDate",
+                "validationPattern": "^\\d{2}/\\d{2}/\\d{2}$",
+                "isMandatory": true
+            },
+            {
+                "field": "Transaction Type",
+                "start": 53,
+                "length": 20,
+                "modelProperty": "TransactionType",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Document Reference",
+                "start": 74,
+                "length": 15,
+                "modelProperty": "DocumentReference",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Order Reference",
+                "start": 90,
+                "length": 15,
+                "modelProperty": "OrderReference",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Due Date",
+                "start": 106,
+                "length": 8,
+                "modelProperty": "DueDate",
+                "validationPattern": "^\\d{2}/\\d{2}/\\d{2}$",
+                "isMandatory": true
+            },
+            {
+                "field": "Disputed",
+                "start": 115,
+                "length": 1,
+                "modelProperty": "Disputed",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Overdue",
+                "start": 117,
+                "length": 1,
+                "modelProperty": "Overdue",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Item Balance",
+                "start": 119,
+                "length": 15,
+                "modelProperty": "ItemBalance",
+                "validationPattern": "^-?\\d+(\\.\\d+)?$",
+                "isMandatory": true
+            },
+            {
+                "field": "Application Date",
+                "start": 135,
+                "length": 8,
+                "modelProperty": "ApplicationDate",
+                "validationPattern": "^\\d{2}/\\d{2}/\\d{2}$",
+                "isMandatory": true
+            },
+            {
+                "field": "Extract Date",
+                "start": 144,
+                "length": 8,
+                "modelProperty": "ExtractDate",
+                "validationPattern": "^\\d{2}/\\d{2}/\\d{2}$",
+                "isMandatory": true
+            },
+            {
+                "field": "Migration Reference",
+                "start": 153,
+                "length": 30,
+                "modelProperty": "MigrationReference",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "Item Amount",
+                "start": 184,
+                "length": 15,
+                "modelProperty": "ItemAmount",
+                "validationPattern": "",
+                "isMandatory": false
+            },
+            {
+                "field": "End Field",
+                "start": 200,
+                "length": 1,
+                "modelProperty": "EndField",
+                "validationPattern": "",
+                "isMandatory": false
+            }
+        ]
+    }
+]

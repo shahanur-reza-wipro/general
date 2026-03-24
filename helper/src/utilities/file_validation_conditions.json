@@ -1,0 +1,24 @@
+{
+    "conditions": [
+        {
+            "name": "FileProcessed",
+            "logMessage": "File Previously Processed",
+            "description": "This condition checks if the file has been processed previously."
+        },
+        {
+            "name": "FilenameAndType",
+            "logMessage": "Invalid file Name or Format",
+            "description": "This condition checks if the filename and type match the expected pattern."
+        },
+        {
+            "name": "ApplicationDate",
+            "logMessage": "File Data (Application Date) is out of Date",
+            "description": "This condition checks if the application date in the file is within the expected range."
+        },
+        {
+            "name": "ExtractDate",
+            "logMessage": "File Data (Extract Date) is out of Date",
+            "description": "This condition checks if the extract date in the file is within the expected range."
+        }
+    ]
+}

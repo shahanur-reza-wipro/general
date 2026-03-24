@@ -1,0 +1,12 @@
+FROM postgres:16
+
+ENV POSTGRES_USER=postgresadmin \
+    POSTGRES_PASSWORD=CbL3*92 \
+    POSTGRES_DB=DSS
+
+EXPOSE 5432
+
+VOLUME ["/var/lib/postgresql/data"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=5 \
+  CMD pg_isready -U postgresadmin -d DSS || exit 1

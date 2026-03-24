@@ -1,0 +1,34 @@
+{
+  "conditions": [
+    {
+      "name": "AssignmentAlreadyRequestedToday",
+      "logMessage": "Assignment Already Requested",
+      "description": "Prevent duplicate assignment letters for the same IPR on the same day."
+    },
+    {
+      "name": "InpaymentDetails",
+      "logMessage": "Missing In-Payment Details",
+      "description": "In Payment Bank Code, Bank Account and IBAN must all be present."
+    },
+    {
+      "name": "AssignmentDue",
+      "logMessage": "",
+      "description": "AssignmentDue flag must be 1 (true). No note is logged when this check fails."
+    },
+    {
+      "name": "CreditControllerDetails",
+      "logMessage": "Missing Credit Controller",
+      "description": "A Credit Controller must be assigned."
+    },
+    {
+      "name": "DebtorEmail",
+      "logMessage": "Missing Debtor Email",
+      "description": "Debtor Statement Email is preferred. Letter still generated if missing – manual delivery."
+    },
+    {
+      "name": "RequestAssignmentLetter",
+      "logMessage": "Request Assignment Letter",
+      "description": "All required conditions have been met. Assignment letter requested."
+    }
+  ]
+}

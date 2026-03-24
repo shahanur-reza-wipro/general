@@ -1,0 +1,96 @@
+{
+  "isLocal": true,
+  "environmentNameMap": {
+    "Dev": ["d", "de1", "de2"],
+    "QA": ["t", "te1", "te2"],
+    "PreProduction": ["w", "we1", "we2"],
+    "Production": ["p", "pe1", "pe2"]
+  },
+  "useRDSProxy": true,
+  "dbEndpointSecretName": "cbif-${ENV_ID}-euw2-rds-proxy-dss-${ENV_INSTANCE_ID}-endpoint-detail",
+  "region": "eu-west-2",
+  "userName": "postgresadmin",
+  "password": "CbL3*92",
+  "dbHost": "localhost",
+  "dbPort": "5432",
+  "dbName": "DSS",
+  "dataFileType": ".txt",
+  "dataFileNamePattern": "^(ADISTMOUT|BDISTMOUT)\\S*$",
+  "statementGenerationConditions": [
+    "StatementRequestedToday",
+    "InpaymentDetails",
+    "STMFlag",
+    "StatementRunDay",
+    "AccountBalanceMin",
+    "AccountBalanceMatch",
+    "CreditControllerDetails",
+    "DebtorEmail",
+    "RequestStatementGeneration"
+  ],
+  "assignmentLetterGenerationConditions": [
+    "AssignmentAlreadyRequestedToday",
+    "InpaymentDetails",
+    "AssignmentDue",
+    "CreditControllerDetails",
+    "DebtorEmail",
+    "RequestAssignmentLetter"
+  ],
+  "dunningLetterGenerationConditions": [
+    "DunningAlreadyRequestedToday",
+    "DunningFlag",
+    "DunningCycleCode",
+    "AccountBalance",
+    "CreditControllerDetails",
+    "DebtorEmail",
+    "RequestDunningLetter"
+  ],
+  "recordValidationConditions": [
+    "CheckInvalidIPR",
+    "EndsWithX",
+    "FieldFormat"
+  ],
+  "fileValidationConditions": [
+    "FileProcessed",
+    "FilenameAndType",
+    "ApplicationDate",
+    "ExtractDate"
+  ],
+  "openTextSecretName": "cbif-${ENV_ID}-euw2-opentext-dss-${ENV_INSTANCE_ID}-secret",
+  "opentextAuthUrl": "https://dstdev.cbgd.opentext.cloud/otdsws/v1/authentication/credentials",
+  "opentextUserName": "zSvcOTComExAdmDev@closebrothers.com",
+  "opentextPassword": "LivelinkDEV@12345",
+  "opentextStatementUrl": "https://exdev.cbqd.opentext.cloud/EXTENANT/AF_St/v1/communications?name=invoiceFinanceDocumentRoot&version=1",
+  "opentextRequestUrl": "https://exdev.cbqd.opentext.cloud/EXTENANT/AF_St/v1/communications?name=invoiceFinanceDocumentReport&version=1",
+  "opentextAssignmentCreateUrl": "https://exdev.cbgd.opentext.cloud/EXTENANT/AF_Dev/v1/communications?name=invoiceFinanceAssignmentDocumentRoot&version=1",
+  "opentextAssignmentReportUrl": "https://exdev.cbgd.opentext.cloud/EXTENANT/AF_Dev/v1/communications?name=invoiceFinanceAssignmentDocumentReport&version=1",
+  "opentextDunningCreateUrl": "https://exdev.cbgd.opentext.cloud/EXTENANT/AF_Dev/v1/communications?name=invoiceFinanceDunningDocumentRoot&version=1",
+  "opentextDunningReportUrl": "https://exdev.cbgd.opentext.cloud/EXTENANT/AF_Dev/v1/communications?name=invoiceFinanceDunningDocumentReport&version=1",
+  "notificationTopicName": "sns_topic_2",
+  "snsArnSecretName": "cbif-${ENV_ID}-euw2-sns-dss-${ENV_INSTANCE_ID}-config",
+  "orchestratorQueueName": "cbif-${ENV_ID}-euw2-sqs-dss-orchestrator-${ENV_INSTANCE_ID}",
+  "requestsQueueName": "cbif-${ENV_ID}-euw2-sqs-dss-requests-${ENV_INSTANCE_ID}",
+  "statementsQueueName": "cbif-${ENV_ID}-euw2-sqs-dss-statements-${ENV_INSTANCE_ID}",
+  "assignmentLetterOrchestratorQueueName": "cbif-${ENV_ID}-euw2-sqs-dss-assignment-orchestrator-${ENV_INSTANCE_ID}",
+  "assignmentLetterRequestsQueueName": "cbif-${ENV_ID}-euw2-sqs-dss-assignment-requests-${ENV_INSTANCE_ID}",
+  "dunningLetterOrchestratorQueueName": "cbif-${ENV_ID}-euw2-sqs-dss-dunning-orchestrator-${ENV_INSTANCE_ID}",
+  "dunningLetterRequestsQueueName": "cbif-${ENV_ID}-euw2-sqs-dss-dunning-requests-${ENV_INSTANCE_ID}",
+  "integrationConfigSecretName": "cbif-${ENV_ID}-euw2-sm-integration-dss-${ENV_INSTANCE_ID}",
+  "fileProcessedReportGeneratorLambdaDetailsSecretName": "cbif-${ENV_ID}-euw2-lmd-dss-filesprocessedreport-generator-${ENV_INSTANCE_ID}-secret",
+  "fileSummaryReportGeneratorLambdaDetailsSecretName": "cbif-${ENV_ID}-euw2-lmd-dss-filessummaryreportgenerator-${ENV_INSTANCE_ID}-secret",
+  "processingReportGenerationAttemptInterval": 15,
+  "summaryReportGenerationAttemptInterval": 30,
+  "fileProcessingReportRecipients": [
+    "shahanur.reza@closebrothers.com",
+    "julia.hall@closebrothers.com",
+    "garima.sharma@closebrothers.com",
+    "richard.tibbitt@closebrothers.com"
+  ],
+  "fileProcessingReportSender": "cbif.dsseports@closebrothers.com",
+  "fileSummaryReportRecipients": [
+    "shahanur.reza@closebrothers.com",
+    "julia.hall@closebrothers.com",
+    "garima.sharma@closebrothers.com",
+    "richard.tibbitt@closebrothers.com"
+  ],
+  "fileSummaryReportSender": "cbif.dsseports@closebrothers.com"
+}

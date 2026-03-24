@@ -1,0 +1,7 @@
+# GitLab CI/CD pipeline configuration
+# Placeholder file created to match project structure from reference image.
+
+stages:
+  - build
+  - test
+  - deploy

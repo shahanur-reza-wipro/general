@@ -1,0 +1,39 @@
+{
+  "conditions": [
+    {
+      "name": "DunningAlreadyRequestedToday",
+      "logMessage": "Dunning Already Requested",
+      "description": "Prevent duplicate dunning letters for the same IPR on the same day."
+    },
+    {
+      "name": "DunningFlag",
+      "logMessage": "",
+      "description": "Dunning Reminder flag must be 1, 2, or 3. If flag is 0, no processing and no log."
+    },
+    {
+      "name": "DunningCycleCode",
+      "logMessage": "Unknown Dunning Cycle Code",
+      "description": "Cycle code must be one of 5200, 5201, 5202 for OpenText dynamic content."
+    },
+    {
+      "name": "AccountBalance",
+      "logMessage": "Account Balance is 0",
+      "description": "Dunning letter only required where account balance is greater than zero."
+    },
+    {
+      "name": "CreditControllerDetails",
+      "logMessage": "Missing Credit Controller",
+      "description": "A Credit Controller must be assigned in CloseNet."
+    },
+    {
+      "name": "DebtorEmail",
+      "logMessage": "Missing Debtor Email",
+      "description": "Debtor Statement Email is preferred. Letter still generated if missing; manual delivery required."
+    },
+    {
+      "name": "RequestDunningLetter",
+      "logMessage": "Request Dunning Letter",
+      "description": "All required conditions are met and dunning letter is requested to OpenText."
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "conditions": [
+    {
+      "name": "StatementRequestedToday",
+      "logMessage": "Statement Already Requested",
+      "description": ""
+    },
+    {
+      "name": "InpaymentDetails",
+      "logMessage": "Missing In-Payment Details",
+      "description": ""
+    },
+    {
+      "name": "STMFlag",
+      "logMessage": "STM Flag is 0",
+      "description": ""
+    },
+    {
+      "name": "StatementRunDay",
+      "logMessage": "Different STM Run Day",
+      "description": ""
+    },
+    {
+      "name": "AccountBalanceMin",
+      "logMessage": "Balance Under Threshold",
+      "description": ""
+    },
+    {
+      "name": "AccountBalanceMatch",
+      "logMessage": "Balance Mismatch",
+      "description": ""
+    },
+    {
+      "name": "CreditControllerDetails",
+      "logMessage": "Missing Credit Controller",
+      "description": ""
+    },
+    {
+      "name": "DebtorEmail",
+      "logMessage": "Missing Debtor Email",
+      "description": ""
+    },
+    {
+      "name": "RequestStatementGeneration",
+      "logMessage": "Request Statement Generation",
+      "description": ""
+    }
+  ]
+}

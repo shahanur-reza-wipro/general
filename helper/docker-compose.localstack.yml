@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  localstack:
+    image: localstack/localstack:3.7
+    container_name: cbif-dss-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs,sns,ses,secretsmanager
+      - AWS_DEFAULT_REGION=eu-west-2
+      - DEBUG=1
+      - LS_LOG=info
+      # Queue naming parameters used by the init script
+      - ENV_ID=de1
+      - ENV_INSTANCE_ID=001
+    volumes:
+      - ./localstack/init:/etc/localstack/init/ready.d
+      - localstack-data:/var/lib/localstack
+
+volumes:
+  localstack-data:

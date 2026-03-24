@@ -1,0 +1,29 @@
+{
+  "templates": {
+    "FILE_RECEIVED": {
+      "subject": "Debtor and Open Item Extracts Received on {date} at {time} [{env}]",
+      "body": "The Debtor Statement Service has received the following files for processing:\n\n{debtor_file_name}\n{transaction_file_name}\n\nPlease check these details.",
+      "args": "date,time,env,debtor_file_name,transaction_file_name"
+    },
+    "FILE_PROCESSED": {
+      "subject": "Debtor and Open Item Extracts {status} on {date} at {time} [{env}]",
+      "body": "The Debtor Statement Service has processed the following files:\n\n{debtor_file_name} {debtor_file_status}\n\n{transaction_file_name} {transaction_file_status}",
+      "args": "status,date,time,env,debtor_file_name,debtor_file_status,transaction_file_name,transaction_file_status"
+    },
+    "FILE_PROCESSED_PREVIOUSLY": {
+      "subject": "Debtor and Open Item Extracts {status} on {date} at {time} [{env}]",
+      "body": "The Debtor Statement Service has processed the following files:\n\n{debtor_file_name} {debtor_file_status}\n\n{transaction_file_name} {transaction_file_status}",
+      "args": "status,date,time,env,debtor_file_name,debtor_file_status,transaction_file_name,transaction_file_status"
+    },
+    "VALIDATION_DATA": {
+      "subject": "Debtor and Open Item Extracts-Record Level Validation on {date} at {time} [{env}]",
+      "body": "The Debtor Statement Service has processed. Please find the attachment for the details.",
+      "args": "date,time,env"
+    },
+    "SUMMARY_REPORT": {
+      "subject": "Statement Generation Report for {date} at {time} [{env}]",
+      "body": "The attached report details statements that were generated today.\n\nRun Id:{run_id}",
+      "args": "date,time,env,run_id"
+    }
+  }
+}

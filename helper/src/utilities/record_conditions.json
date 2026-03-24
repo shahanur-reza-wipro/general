@@ -1,0 +1,19 @@
+{
+    "conditions": [
+        {
+            "name": "CheckInvalidIPR",
+            "logMessage": "Unknown IPR",
+            "ddescription": "This condition checks if the IPR value in the record is valid and recognized by the system."
+        },
+        {
+            "name": "EndsWithX",
+            "logMessage": "Invalid Format - Ends with X",
+            "ddescription": "This condition checks if the IPR value in the record ends with the character 'X', which is considered invalid."
+        },
+        {
+            "name": "FieldFormat",
+            "logMessage": "Invalid Format - Field Format",
+            "ddescription": "This condition checks if the IPR value in the record has an invalid format."
+        }
+    ]
+}

@@ -1,0 +1,64 @@
+{
+  "lambda_functions": [
+    {
+      "source_path": "../lambda_db_operation",
+      "function_name": "dssdboperation"
+    },
+    {
+      "source_path": "../lambda_sftp_operation",
+      "function_name": "sftpoperation"
+    },
+    {
+      "source_path": "../lambda_extract_files_processed_report",
+      "function_name": "filesprocessedreportgenerator"
+    },
+    {
+      "source_path": "../lambda_extract_files_summary_report",
+      "function_name": "filessummaryreportgenerator"
+    },
+    {
+      "source_path": "../lambda_file_data_ingestor",
+      "function_name": "filedataingestor"
+    },
+    {
+      "source_path": "../lambda_statement_request_submitter",
+      "function_name": "statementrequestsubmitter"
+    },
+    {
+      "source_path": "../lambda_statement_validator",
+      "function_name": "statementvalidator"
+    },
+    {
+      "source_path": "../lambda_opentextresponseupdater",
+      "function_name": "opentextresponseupdater"
+    }
+  ],
+  "lambda_layers": [
+    {
+      "source_path": "../external_packages/",
+      "layer_name": "external_packages",
+      "runtime": "python3.11"
+    },
+    {
+      "source_path": "../repositories",
+      "layer_name": "repositories",
+      "runtime": "python3.11"
+    },
+    {
+      "source_path": "../data_access_layer",
+      "layer_name": "data_access_layer",
+      "runtime": "python3.11"
+    },
+    {
+      "source_path": "../services",
+      "layer_name": "services",
+      "runtime": "python3.11"
+    },
+    {
+      "source_path": "../utilities",
+      "layer_name": "utilities",
+      "runtime": "python3.11"
+    }
+  ],
+  "application_version": "0.0.1"
+}
