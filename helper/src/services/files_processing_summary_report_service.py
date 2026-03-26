@@ -96,6 +96,15 @@ class FilesProcessingSummaryReportService:
                 self.statement_request_repository.get_distinct_submission_ids_by_date(request_date)
             )
 
+        # Keep assignment/dunning independent from statement IDs.
+        # If their date-based lookup returns nothing, use only the explicit run ID passed
+        # into this summary flow (if available).
+        if not assignment_ids and statement_submission_id:
+            assignment_ids = [str(statement_submission_id)]
+
+        if not dunning_ids and statement_submission_id:
+            dunning_ids = [str(statement_submission_id)]
+
         return {
             "statement": statement_ids,
             "assignment": assignment_ids,
@@ -296,17 +305,59 @@ class FilesProcessingSummaryReportService:
         )
 
         try:
-            total_records_processed = int(
-                open_text_response["data"]["result"][0]["TotalRecordsProcessed"][0]
+            total_records_processed = self.extract_total_records_processed(open_text_response)
+        except (KeyError, ValueError, TypeError):
+            log.info(
+                f"OpenText has not processed {document_type} yet or returned an unexpected "
+                f"totalProcessed payload. response={open_text_response}"
             )
-        except KeyError:
-            log.info(f"OpenText has not processed {document_type} yet")
             total_records_processed = 0
         except Exception as e:
             log.exception(f"Unexpected error while getting {document_type} count: {e}")
             total_records_processed = 0
 
         return total_records_processed
+
+    def extract_total_records_processed(self, open_text_response):
+        data = open_text_response.get("data", {}) if isinstance(open_text_response, dict) else {}
+        result = data.get("result", [])
+
+        if isinstance(result, dict):
+            result = [result]
+
+        if not isinstance(result, list) or not result:
+            raise KeyError("Missing result payload")
+
+        candidate_keys = [
+            "TotalRecordsProcessed",
+            "totalRecordsProcessed",
+            "TotalProcessed",
+            "totalProcessed",
+            "RecordCount",
+            "recordCount",
+        ]
+
+        for entry in result:
+            if not isinstance(entry, dict):
+                continue
+
+            for key in candidate_keys:
+                if key not in entry:
+                    continue
+
+                value = entry.get(key)
+
+                if isinstance(value, list):
+                    value = value[0] if value else 0
+
+                if isinstance(value, dict):
+                    nested = value.get("value")
+                    if nested is not None:
+                        value = nested
+
+                return int(value)
+
+        raise KeyError("Total records processed key not found")
 
     def get_report_endpoint_url(self, document_type):
         if document_type == "statement":
