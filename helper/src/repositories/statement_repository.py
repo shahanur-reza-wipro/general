@@ -1,7 +1,7 @@
 # statement_repository.py
 
 from typing import List
-from sqlalchemy import func
+from sqlalchemy import func, cast, String
 from data_access_layer.models import Statement
 from data_access_layer import Database
 from .abstract_repository import AbstractRepository
@@ -79,8 +79,18 @@ class StatementRepository(AbstractRepository):
                 session.query(func.count(Statement.ID))
                 .filter(
                     func.date(Statement.StatementRequestDateTime) == statement_request_date,
-                    func.text(Statement.RunId) == str(submission_id),
+                    cast(Statement.RunId, String) == str(submission_id),
                 )
+                .scalar()
+            )
+
+        return count or 0
+
+    def get_statement_count_by_submission_id(self, submission_id):
+        with self.db.get_session() as session:
+            count = (
+                session.query(func.count(Statement.ID))
+                .filter(cast(Statement.RunId, String) == str(submission_id))
                 .scalar()
             )
 
@@ -100,8 +110,22 @@ class StatementRepository(AbstractRepository):
                 session.query(Statement.StatementRequestId)
                 .filter(
                     func.date(Statement.StatementRequestDateTime) == statement_request_date,
-                    func.text(Statement.RunId) == str(submission_id),
+                    cast(Statement.RunId, String) == str(submission_id),
                 )
+                .distinct()
+                .all()
+            )
+
+        if distinct_statement_request_ids:
+            return distinct_statement_request_ids
+
+        return None
+
+    def get_distinct_statement_request_id_by_submission_id(self, submission_id):
+        with self.db.get_session() as session:
+            distinct_statement_request_ids = (
+                session.query(Statement.StatementRequestId)
+                .filter(cast(Statement.RunId, String) == str(submission_id))
                 .distinct()
                 .all()
             )
@@ -115,7 +139,7 @@ class StatementRepository(AbstractRepository):
         conditions = [
             lambda q: q.filter(Statement.OpenTextIPR == ipr),
             lambda q: q.filter(func.date(Statement.StatementRequestDateTime) == date),
-            lambda q: q.filter(func.text(Statement.RunId) == str(submission_id)),
+            lambda q: q.filter(cast(Statement.RunId, String) == str(submission_id)),
         ]
 
         statements = self.db.get_with_condition(Statement, conditions)
@@ -130,7 +154,7 @@ class StatementRepository(AbstractRepository):
 
         conditions = [
             lambda q: q.filter(func.date(Statement.StatementRequestDateTime) == statement_request_date),
-            lambda q: q.filter(func.text(Statement.RunId) == str(submission_id)),
+            lambda q: q.filter(cast(Statement.RunId, String) == str(submission_id)),
         ]
 
         statements = self.db.get_with_condition(

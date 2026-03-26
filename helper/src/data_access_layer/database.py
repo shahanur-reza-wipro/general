@@ -272,8 +272,13 @@ class Database:
 
     def get_by_id(self, id, object_type):
         """Fetch a single record by ID."""
+        if not isinstance(id, uuid.UUID):
+            try:
+                id = uuid.UUID(str(id))
+            except (ValueError, AttributeError):
+                pass
         with self.get_session() as session:
-            object = session.query(object_type).get(str(id) if isinstance(id, uuid.UUID) else id)
+            object = session.query(object_type).get(id)
             if object is not None:
                 session.expunge(object)
             return object

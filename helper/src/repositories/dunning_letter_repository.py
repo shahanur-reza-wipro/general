@@ -3,7 +3,7 @@ from datetime import date
 from typing import List
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import func, cast, String
 
 from data_access_layer.models.dunning_letter import DunningLetter
 from data_access_layer import Database
@@ -58,8 +58,17 @@ class DunningLetterRepository(AbstractRepository):
                 session.query(func.count(DunningLetter.ID))
                 .filter(
                     func.date(DunningLetter.RequestDateTime) == request_date,
-                    func.text(DunningLetter.RunId) == str(submission_id),
+                    cast(DunningLetter.RunId, String) == str(submission_id),
                 )
+                .scalar()
+            )
+        return count or 0
+
+    def get_dunning_letter_count_by_submission_id(self, submission_id):
+        with self.db.get_session() as session:
+            count = (
+                session.query(func.count(DunningLetter.ID))
+                .filter(cast(DunningLetter.RunId, String) == str(submission_id))
                 .scalar()
             )
         return count or 0
@@ -70,8 +79,18 @@ class DunningLetterRepository(AbstractRepository):
                 session.query(DunningLetter.DunningLetterRequestId)
                 .filter(
                     func.date(DunningLetter.RequestDateTime) == request_date,
-                    func.text(DunningLetter.RunId) == str(submission_id),
+                    cast(DunningLetter.RunId, String) == str(submission_id),
                 )
+                .distinct()
+                .all()
+            )
+        return ids or None
+
+    def get_distinct_dunning_request_id_by_submission_id(self, submission_id):
+        with self.db.get_session() as session:
+            ids = (
+                session.query(DunningLetter.DunningLetterRequestId)
+                .filter(cast(DunningLetter.RunId, String) == str(submission_id))
                 .distinct()
                 .all()
             )

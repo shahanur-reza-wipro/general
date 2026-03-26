@@ -230,13 +230,22 @@ class FilesProcessingSummaryReportService:
         dunning_total = 0
 
         for sid in self._get_submission_ids("statement"):
-            statement_total += self.statement_repository.get_statement_count_by_date(today, sid)
+            count = self.statement_repository.get_statement_count_by_date(today, sid)
+            if count == 0:
+                count = self.statement_repository.get_statement_count_by_submission_id(sid)
+            statement_total += count
 
         for sid in self._get_submission_ids("assignment"):
-            assignment_total += self.assignment_letter_repository.get_assignment_letter_count_by_date(today, sid)
+            count = self.assignment_letter_repository.get_assignment_letter_count_by_date(today, sid)
+            if count == 0:
+                count = self.assignment_letter_repository.get_assignment_letter_count_by_submission_id(sid)
+            assignment_total += count
 
         for sid in self._get_submission_ids("dunning"):
-            dunning_total += self.dunning_letter_repository.get_dunning_letter_count_by_date(today, sid)
+            count = self.dunning_letter_repository.get_dunning_letter_count_by_date(today, sid)
+            if count == 0:
+                count = self.dunning_letter_repository.get_dunning_letter_count_by_submission_id(sid)
+            dunning_total += count
 
         return {
             "statement": statement_total,
@@ -457,16 +466,28 @@ class FilesProcessingSummaryReportService:
                     today,
                     sid,
                 )
+                if not request_ids:
+                    request_ids = self.statement_repository.get_distinct_statement_request_id_by_submission_id(
+                        sid,
+                    )
             elif document_type == "assignment":
                 request_ids = self.assignment_letter_repository.get_distinct_assignment_request_id_by_date(
                     today,
                     sid,
                 )
+                if not request_ids:
+                    request_ids = self.assignment_letter_repository.get_distinct_assignment_request_id_by_submission_id(
+                        sid,
+                    )
             else:
                 request_ids = self.dunning_letter_repository.get_distinct_dunning_request_id_by_date(
                     today,
                     sid,
                 )
+                if not request_ids:
+                    request_ids = self.dunning_letter_repository.get_distinct_dunning_request_id_by_submission_id(
+                        sid,
+                    )
 
             if request_ids:
                 all_request_ids.extend([str(item[0]) for item in request_ids if item and item[0]])

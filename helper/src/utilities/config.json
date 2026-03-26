@@ -92,5 +92,7 @@
     "garima.sharma@closebrothers.com",
     "richard.tibbitt@closebrothers.com"
   ],
-  "fileSummaryReportSender": "cbif.dsseports@closebrothers.com"
+  "fileSummaryReportSender": "cbif.dsseports@closebrothers.com",
+  "enableAssignmentLetters": true,
+  "enableDunningLetters": true
 }

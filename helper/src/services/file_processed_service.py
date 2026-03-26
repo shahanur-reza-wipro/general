@@ -94,14 +94,20 @@ class FileProcessedService:
                         )
 
                         # queue Debtors for Assignment Letter Generation (independent of statements)
-                        assignment_letter_orchestration_service = AssignmentLetterOrchestrationService()
-                        log.info("starting to queue for assignment letter validation")
-                        assignment_letter_orchestration_service.queue_to_validate_assignment_letter_generation()
+                        if self.configuration.enableAssignmentLetters:
+                            assignment_letter_orchestration_service = AssignmentLetterOrchestrationService()
+                            log.info("starting to queue for assignment letter validation")
+                            assignment_letter_orchestration_service.queue_to_validate_assignment_letter_generation()
+                        else:
+                            log.info("Assignment letter generation is disabled via config (enableAssignmentLetters=false).")
 
                         # queue Debtors for Dunning Letter Generation (independent of statements and assignment letters)
-                        dunning_letter_orchestration_service = DunningLetterOrchestrationService()
-                        log.info("starting to queue for dunning letter validation")
-                        dunning_letter_orchestration_service.queue_to_validate_dunning_letter_generation()
+                        if self.configuration.enableDunningLetters:
+                            dunning_letter_orchestration_service = DunningLetterOrchestrationService()
+                            log.info("starting to queue for dunning letter validation")
+                            dunning_letter_orchestration_service.queue_to_validate_dunning_letter_generation()
+                        else:
+                            log.info("Dunning letter generation is disabled via config (enableDunningLetters=false).")
                     else:
                         log.info(
                             f"both files are not valid. "

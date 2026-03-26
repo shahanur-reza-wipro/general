@@ -60,6 +60,8 @@ class Configuration:
         fileProcessingReportSender="",
         fileSummaryReportRecipients=[],
         fileSummaryReportSender="",
+        enableAssignmentLetters=True,
+        enableDunningLetters=True,
     ):
         self.isLocal = isLocal
         self.useRDSProxy = useRDSProxy
@@ -106,6 +108,8 @@ class Configuration:
         self.fileProcessingReportSender = fileProcessingReportSender
         self.fileSummaryReportRecipients = fileSummaryReportRecipients
         self.fileSummaryReportSender = fileSummaryReportSender
+        self.enableAssignmentLetters = enableAssignmentLetters
+        self.enableDunningLetters = enableDunningLetters
         self.fileProcessedReportGeneratorLambdaDetailsSecretName = (
             fileProcessedReportGeneratorLambdaDetailsSecretName
         )

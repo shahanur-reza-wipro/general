@@ -98,8 +98,13 @@ class AssignmentLetterValidationService:
                     letters.append(letter)
 
         if letters:
-            total_requests = self.assignment_letter_request_repository.get_total_request_submission(
+            existing_request_count = self.assignment_letter_request_repository.get_total_request_submission(
                 self.submission_id
+            )
+            total_requests = (
+                existing_request_count + 1
+                if existing_request_count == 0
+                else existing_request_count
             )
             request_base64_body = self._build_request_xml(request_id, approved_debtors, total_requests)
 

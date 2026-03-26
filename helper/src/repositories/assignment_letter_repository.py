@@ -3,7 +3,7 @@ from datetime import date
 from typing import List
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import func, cast, String
 
 from data_access_layer.models.assignment_letter import AssignmentLetter
 from data_access_layer import Database
@@ -58,8 +58,17 @@ class AssignmentLetterRepository(AbstractRepository):
                 session.query(func.count(AssignmentLetter.ID))
                 .filter(
                     func.date(AssignmentLetter.RequestDateTime) == request_date,
-                    func.text(AssignmentLetter.RunId) == str(submission_id),
+                    cast(AssignmentLetter.RunId, String) == str(submission_id),
                 )
+                .scalar()
+            )
+        return count or 0
+
+    def get_assignment_letter_count_by_submission_id(self, submission_id):
+        with self.db.get_session() as session:
+            count = (
+                session.query(func.count(AssignmentLetter.ID))
+                .filter(cast(AssignmentLetter.RunId, String) == str(submission_id))
                 .scalar()
             )
         return count or 0
@@ -70,8 +79,18 @@ class AssignmentLetterRepository(AbstractRepository):
                 session.query(AssignmentLetter.AssignmentLetterRequestId)
                 .filter(
                     func.date(AssignmentLetter.RequestDateTime) == request_date,
-                    func.text(AssignmentLetter.RunId) == str(submission_id),
+                    cast(AssignmentLetter.RunId, String) == str(submission_id),
                 )
+                .distinct()
+                .all()
+            )
+        return ids or None
+
+    def get_distinct_assignment_request_id_by_submission_id(self, submission_id):
+        with self.db.get_session() as session:
+            ids = (
+                session.query(AssignmentLetter.AssignmentLetterRequestId)
+                .filter(cast(AssignmentLetter.RunId, String) == str(submission_id))
                 .distinct()
                 .all()
             )
