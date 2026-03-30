@@ -545,12 +545,31 @@ class FilesProcessingSummaryReportService:
 
         return list(dict.fromkeys(all_request_ids))
 
+    def get_request_type_for_document(self, document_type):
+        mapping = {
+            "statement": "statementrequest",
+            "assignment": "assignmentrequest",
+            "dunning": "dunningrequest",
+        }
+        return mapping.get(document_type, "statementrequest")
+
+    def get_request_id_tag_for_document(self, document_type):
+        mapping = {
+            "statement": "statementRequestId",
+            "assignment": "assignmentRequestId",
+            "dunning": "dunningRequestId",
+        }
+        return mapping.get(document_type, "statementRequestId")
+
     def get_request_status_from_opentext(self, request_id, document_type):
+        request_type = self.get_request_type_for_document(document_type)
+        request_id_tag = self.get_request_id_tag_for_document(document_type)
 
         xml_string = f"""
         <Document>
-            <requestType>requestStatus</requestType>
-            <statementRequestId>{request_id}</statementRequestId>
+            <requestType>{request_type}</requestType>
+            <{request_id_tag}>{request_id}</{request_id_tag}>
+            <submissionId>{self.report_run_id}</submissionId>
         </Document>
         """
 

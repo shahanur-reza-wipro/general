@@ -55,4 +55,4 @@ class DunningLetterRequestRepository(AbstractRepository):
                 .distinct()
                 .all()
             )
-        return submission_ids or []
+        return [str(row[0]) for row in submission_ids if row and row[0]]

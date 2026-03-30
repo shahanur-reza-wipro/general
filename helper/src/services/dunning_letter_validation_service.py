@@ -123,26 +123,30 @@ class DunningLetterValidationService:
             raise
 
     def _build_request_xml(self, request_id, debtors, total_requests) -> str:
-        invoices = [self._build_invoice_node(debtor) for debtor in debtors]
-        first_debtor = debtors[0] if debtors else None
-        first_email = first_debtor.DebtorStmEmail if first_debtor and first_debtor.DebtorStmEmail else ""
-        dunning_reminder = str(getattr(first_debtor, "DunningReminder", "") or "") if first_debtor else ""
+        invoice_roots = []
+
+        for debtor in debtors:
+            debtor_email = debtor.DebtorStmEmail if debtor.DebtorStmEmail else ""
+            dunning_reminder = str(getattr(debtor, "DunningReminder", "") or "")
+            invoice_roots.append(
+                {
+                    "metadata": {
+                        "isLastFile": "true" if self.is_last_chunk else "false",
+                        "totalRequests": str(total_requests),
+                        "submissionId": str(self.submission_id or ""),
+                        "statementRequestId": str(request_id),
+                        "generationDate": datetime.today().strftime("%Y-%m-%d"),
+                        "printDestination": "EML" if debtor_email else "ARCH1",
+                        "letterType": "DunningLetter",
+                        "email": debtor_email,
+                        "dunningReminder": dunning_reminder,
+                    },
+                    "invoice": self._build_invoice_node(debtor),
+                }
+            )
 
         payload = {
-            "invoiceFinanceDunningDocumentRoot": {
-                "metadata": {
-                    "isLastFile": "true" if self.is_last_chunk else "false",
-                    "totalRequests": str(total_requests),
-                    "submissionId": str(self.submission_id or ""),
-                    "statementRequestId": str(request_id),
-                    "generationDate": datetime.today().strftime("%Y-%m-%d"),
-                    "printDestination": "EML" if first_email else "ARCH1",
-                    "letterType": "DunningLetter",
-                    "email": first_email,
-                    "dunningReminder": dunning_reminder,
-                },
-                "invoice": invoices,
-            }
+            "invoiceFinanceDunningDocumentRoot": invoice_roots,
         }
 
         xml_str = Utility.dict_to_xml("invoices", payload)

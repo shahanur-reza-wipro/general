@@ -43,7 +43,7 @@ class StatementValidationService:
             .build_chain(self.configuration.statementGenerationCondition)
         )
 
-        self.invoices = Invoices()
+        self.invoices = invoices()
 
         self.request_queue_name = self.configuration.requestQueueName
         self.integrationConfigSecretName = self.configuration.integrationConfigSecretName
@@ -168,7 +168,7 @@ class StatementValidationService:
             expected_statement_count = len(statements)
 
         if self.invoices.invoiceFinanceDocumentRoot:
-            request = Utility.wrap_value_to_xml(self.invoices)
+            request = Utility.serialize_to_xml(self.invoices)
             base64request = Utility.encode_to_base64(request)
 
             return base64request, request_id, expected_statement_count

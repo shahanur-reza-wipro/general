@@ -141,23 +141,28 @@ class AssignmentLetterValidationService:
     def _build_request_xml(self, request_id, debtors, total_requests) -> str:
         """Builds a base64-encoded XML payload for assignment letter requests."""
 
-        invoices = [self._build_invoice_node(debtor) for debtor in debtors]
-        first_email = debtors[0].DebtorStmEmail if debtors and debtors[0].DebtorStmEmail else ""
+        invoice_roots = []
+
+        for debtor in debtors:
+            debtor_email = debtor.DebtorStmEmail if debtor.DebtorStmEmail else ""
+            invoice_roots.append(
+                {
+                    "metadata": {
+                        "isLastFile": "true" if self.is_last_chunk else "false",
+                        "totalRequests": str(total_requests),
+                        "submissionId": str(self.submission_id or ""),
+                        "statementRequestId": str(request_id),
+                        "generationDate": datetime.today().strftime("%Y-%m-%d"),
+                        "printDestination": "EML" if debtor_email else "ARCH1",
+                        "letterType": "AssignmentLetter",
+                        "email": debtor_email,
+                    },
+                    "invoice": self._build_invoice_node(debtor),
+                }
+            )
 
         payload = {
-            "invoiceFinanceDocumentRoot": {
-                "metadata": {
-                    "isLastFile": "true" if self.is_last_chunk else "false",
-                    "totalRequests": str(total_requests),
-                    "submissionId": str(self.submission_id or ""),
-                    "statementRequestId": str(request_id),
-                    "generationDate": datetime.today().strftime("%Y-%m-%d"),
-                    "printDestination": "EML" if first_email else "ARCH1",
-                    "letterType": "AssignmentLetter",
-                    "email": first_email,
-                },
-                "invoice": invoices,
-            }
+            "invoiceFinanceDocumentRoot": invoice_roots,
         }
 
         xml_str = Utility.dict_to_xml("invoices", payload)
