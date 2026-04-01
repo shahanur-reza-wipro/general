@@ -6,8 +6,12 @@ import logging
 from repositories import (
     TransactionRecordValidationRepository,
     StatementValidationRepository,
+    AssignmentLetterValidationRepository,
+    DunningLetterValidationRepository,
     DebtorRecordValidationRepository,
     StatementRepository,
+    AssignmentLetterRepository,
+    DunningLetterRepository,
     DebtorRepository
 )
 
@@ -27,15 +31,27 @@ class FilesProcessingStatusReportService:
         self.transaction_record_validation_repository = TransactionRecordValidationRepository()
         self.debtor_record_validation_repository = DebtorRecordValidationRepository()
         self.statement_validation_repository = StatementValidationRepository()
+        self.assignment_letter_validation_repository = AssignmentLetterValidationRepository()
+        self.dunning_letter_validation_repository = DunningLetterValidationRepository()
         self.statement_repository = StatementRepository()
+        self.assignment_letter_repository = AssignmentLetterRepository()
+        self.dunning_letter_repository = DunningLetterRepository()
         self.notification_service = NotificationService()
         self.debtor_repository = DebtorRepository()
 
         self.file_processing_status_report_scheduler_service = FilesProcessingStatusReportSchedulerService()
 
-        self.sqs_helper = SQSHelper(
+        self.statement_requests_sqs_helper = SQSHelper(
             self.configuration.requestsQueueName,
             self.configuration.integrationConfigSecretName
+        )
+        self.assignment_requests_sqs_helper = SQSHelper(
+            self.configuration.assignmentLetterRequestsQueueName,
+            self.configuration.integrationConfigSecretName,
+        )
+        self.dunning_requests_sqs_helper = SQSHelper(
+            self.configuration.dunningLetterRequestsQueueName,
+            self.configuration.integrationConfigSecretName,
         )
 
         self.submission_id = ""
@@ -44,11 +60,12 @@ class FilesProcessingStatusReportService:
 
         self.submission_id = submission_id
 
-        message_count = self.sqs_helper.get_sqs_message_count()
+        pending_messages = self.get_total_pending_request_messages()
+        still_pending = [doc_type for doc_type, count in pending_messages.items() if count > 0]
 
-        if message_count and message_count > 0:
-            log.info("System is still processing statement requests.")
-            return "System is still processing statement requests."
+        if still_pending:
+            log.info(f"System is still processing requests: {pending_messages}")
+            return f"System is still processing requests for: {', '.join(still_pending)}."
 
         log.info("Starting to generate report.")
         report = self.get_report()
@@ -93,11 +110,13 @@ class FilesProcessingStatusReportService:
 
         field_names = [
             "IPR",
+            "Assignment Requested",
+            "Dunning Requested",
             "Statement Requested",
-            "Processing Note",
+            "Note Assignments",
+            "Note Dunning",
+            "Note Statements",
             "File Name",
-            "Credit Controller",
-            "Debtor Email Address"
         ]
 
         processing_statuses = self.get_processing_statuses()
@@ -115,7 +134,11 @@ class FilesProcessingStatusReportService:
         debtor_validations = self.fetch_data("debtor_validations")
         transaction_validations = self.fetch_data("transaction_validations")
         statement_validations = self.fetch_data("statement_validations")
+        assignment_validations = self.fetch_data("assignment_validations")
+        dunning_validations = self.fetch_data("dunning_validations")
         statements = self.fetch_data("statements")
+        assignments = self.fetch_data("assignments")
+        dunnings = self.fetch_data("dunnings")
 
         processing_statuses = []
 
@@ -123,30 +146,25 @@ class FilesProcessingStatusReportService:
             debtor_validations,
             transaction_validations,
             statement_validations,
-            statements
+            assignment_validations,
+            dunning_validations,
+            statements,
+            assignments,
+            dunnings,
         )
 
         iprs_map = self.create_map_of_ipr(
             debtor_validations,
             transaction_validations,
             statement_validations,
-            statements
+            assignment_validations,
+            dunning_validations,
+            statements,
+            assignments,
+            dunnings,
         )
 
-        unique_debtors = self.debtor_repository.get_debtor_repository_email(unique_iprs)
-
-        iprs_map_debtor = {}
-
-        for debtor in unique_debtors:
-            ipr = debtor["IPR"]
-
-            if ipr in iprs_map:
-                iprs_map_debtor[ipr] = iprs_map[ipr]
-
-                iprs_map_debtor[ipr]["credit_controller"] = debtor["CreditController"]
-                iprs_map_debtor[ipr]["debtor_stn_email"] = debtor["DebtorStnEmail"]
-
-        self.build_processing_statuses(processing_statuses, unique_iprs, iprs_map_debtor)
+        self.build_processing_statuses(processing_statuses, unique_iprs, iprs_map)
 
         processing_statuses = sorted(processing_statuses, key=lambda x: x["IPR"])
 
@@ -162,7 +180,11 @@ class FilesProcessingStatusReportService:
             "debtor_validations": self.debtor_record_validation_repository.get_debtor_validations_by_date_with_pagination,
             "transaction_validations": self.transaction_record_validation_repository.get_transaction_validations_by_date_with_pagination,
             "statement_validations": self.statement_validation_repository.get_statement_validations_logs_by_date_with_pagination,
-            "statements": self.statement_repository.get_statements_by_request_date_with_pagination
+            "assignment_validations": self.assignment_letter_validation_repository.get_assignment_validations_logs_by_date_with_pagination,
+            "dunning_validations": self.dunning_letter_validation_repository.get_dunning_validations_logs_by_date_with_pagination,
+            "statements": self.statement_repository.get_statements_by_request_date_with_pagination,
+            "assignments": self.assignment_letter_repository.get_assignment_letters_by_request_date_with_pagination,
+            "dunnings": self.dunning_letter_repository.get_dunning_letters_by_request_date_with_pagination,
         }
 
         function = func_map[type]
@@ -187,11 +209,20 @@ class FilesProcessingStatusReportService:
 
         return validation_data
 
-    def get_unique_iprs(self, debtor_validations, transaction_validations, statement_validations, statements):
+    def get_unique_iprs(self, debtor_validations, transaction_validations, statement_validations, assignment_validations, dunning_validations, statements, assignments, dunnings):
 
         unique_iprs = set()
 
-        for lst in [debtor_validations, transaction_validations, statement_validations, statements]:
+        for lst in [
+            debtor_validations,
+            transaction_validations,
+            statement_validations,
+            assignment_validations,
+            dunning_validations,
+            statements,
+            assignments,
+            dunnings,
+        ]:
             if lst:
                 unique_iprs.update(item["IPR"] for item in lst if item is not None)
 
@@ -202,56 +233,71 @@ class FilesProcessingStatusReportService:
         for ipr in unique_iprs:
 
             ipr_data = iprs_map.get(ipr)
+            if not ipr_data:
+                continue
 
             statement = ipr_data.get("statement")
+            assignment = ipr_data.get("assignment")
+            dunning = ipr_data.get("dunning")
             statement_validation = ipr_data.get("statement_validation")
+            assignment_validation = ipr_data.get("assignment_validation")
+            dunning_validation = ipr_data.get("dunning_validation")
             debtor_validation = ipr_data.get("debtor_validation")
             transaction_validation = ipr_data.get("transaction_validation")
 
-            credit_controller = ipr_data.get("credit_controller")
-            debtor_stn_email = ipr_data.get("debtor_stn_email")
-
             validation_data = (
-                statement_validation
+                assignment_validation
+                or dunning_validation
+                or statement_validation
                 or debtor_validation
                 or transaction_validation
+                or assignment
+                or dunning
                 or statement
             )
 
             file_name = validation_data["FileName"] if validation_data else None
 
-            notes = []
+            statement_notes = []
+            assignment_notes = []
+            dunning_notes = []
 
             if statement_validation:
-                notes.append(statement_validation["Log"])
-
+                statement_notes.append(statement_validation["Log"])
             if debtor_validation:
-                notes.append(debtor_validation["Error"])
-
+                statement_notes.append(debtor_validation["Error"])
             if transaction_validation:
-                notes.append(transaction_validation["Error"])
-
-            processing_notes = "\n".join(notes) if notes else None
+                statement_notes.append(transaction_validation["Error"])
+            if assignment_validation:
+                assignment_notes.append(assignment_validation["Log"])
+            if dunning_validation:
+                dunning_notes.append(dunning_validation["Log"])
 
             processing_status = {
                 "IPR": ipr.replace("/", ""),
-                "Statement Requested": "N" if Utility.is_none_or_empty(statement["RequestSubmissionStatus"]) else statement["RequestSubmissionStatus"],
-                "Processing Note": processing_notes,
+                "Assignment Requested": "Y" if assignment else "N",
+                "Dunning Requested": "Y" if dunning else "N",
+                "Statement Requested": "Y" if statement else "N",
+                "Note Assignments": "\n".join(assignment_notes) if assignment_notes else None,
+                "Note Dunning": "\n".join(dunning_notes) if dunning_notes else None,
+                "Note Statements": "\n".join(statement_notes) if statement_notes else None,
                 "File Name": file_name,
-                "Credit Controller": credit_controller,
-                "Debtor Email Address": debtor_stn_email
             }
 
             processing_statuses.append(processing_status)
 
-    def create_map_of_ipr(self, debtor_validations, transaction_validations, statement_validations, statements):
+    def create_map_of_ipr(self, debtor_validations, transaction_validations, statement_validations, assignment_validations, dunning_validations, statements, assignments, dunnings):
 
         iprs_map = defaultdict(
             lambda: {
                 "debtor_validation": None,
                 "transaction_validation": None,
                 "statement_validation": None,
-                "statement": None
+                "assignment_validation": None,
+                "dunning_validation": None,
+                "statement": None,
+                "assignment": None,
+                "dunning": None,
             }
         )
 
@@ -267,8 +313,34 @@ class FilesProcessingStatusReportService:
             if item:
                 iprs_map[item["IPR"]]["statement_validation"] = item
 
+        for item in assignment_validations:
+            if item:
+                iprs_map[item["IPR"]]["assignment_validation"] = item
+
+        for item in dunning_validations:
+            if item:
+                iprs_map[item["IPR"]]["dunning_validation"] = item
+
         for item in statements:
             if item:
                 iprs_map[item["IPR"]]["statement"] = item
 
+        for item in assignments:
+            if item:
+                iprs_map[item["IPR"]]["assignment"] = item
+
+        for item in dunnings:
+            if item:
+                iprs_map[item["IPR"]]["dunning"] = item
+
         return iprs_map
+
+    def get_total_pending_request_messages(self):
+        statement_pending = self.statement_requests_sqs_helper.get_sqs_message_count() or 0
+        assignment_pending = self.assignment_requests_sqs_helper.get_sqs_message_count() or 0
+        dunning_pending = self.dunning_requests_sqs_helper.get_sqs_message_count() or 0
+        return {
+            "statement": statement_pending,
+            "assignment": assignment_pending,
+            "dunning": dunning_pending,
+        }

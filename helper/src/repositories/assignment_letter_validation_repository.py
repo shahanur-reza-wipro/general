@@ -3,7 +3,7 @@ from datetime import date
 from typing import List
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import func, cast, String
 
 from data_access_layer.models.assignment_letter_validation import AssignmentLetterValidation
 from data_access_layer import Database
@@ -49,3 +49,39 @@ class AssignmentLetterValidationRepository(AbstractRepository):
             )
         ]
         return self.db.get_with_condition(AssignmentLetterValidation, conditions)
+
+    def get_assignment_validations_logs_by_date_with_pagination(
+        self,
+        validation_date: date,
+        submission_id,
+        page_number=1,
+        page_size=500,
+    ):
+        offset = (page_number - 1) * page_size
+
+        conditions = [
+            lambda q: q.filter(
+                func.date(AssignmentLetterValidation.ValidationDate) == validation_date
+            ),
+            lambda q: q.filter(cast(AssignmentLetterValidation.RunId, String) == str(submission_id)),
+            lambda q: q.filter(
+                AssignmentLetterValidation.ConditionName != "RequestAssignmentLetter"
+            ),
+        ]
+
+        assignment_validation_records = self.db.get_with_condition(
+            AssignmentLetterValidation,
+            conditions,
+            orderby=(AssignmentLetterValidation.IPR, "asc"),
+            offset=offset,
+            limit=page_size,
+        )
+
+        return [
+            {
+                "IPR": avr.IPR,
+                "Log": avr.Log,
+                "FileName": avr.FileName,
+            }
+            for avr in assignment_validation_records
+        ]

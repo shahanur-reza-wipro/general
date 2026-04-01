@@ -3,7 +3,7 @@ from datetime import date
 from typing import List
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import func, cast, String
 
 from data_access_layer.models.dunning_letter_validation import DunningLetterValidation
 from data_access_layer import Database
@@ -42,3 +42,39 @@ class DunningLetterValidationRepository(AbstractRepository):
             lambda q: q.filter(func.date(DunningLetterValidation.ValidationDate) == validation_date),
         ]
         return self.db.get_with_condition(DunningLetterValidation, conditions)
+
+    def get_dunning_validations_logs_by_date_with_pagination(
+        self,
+        validation_date: date,
+        submission_id,
+        page_number=1,
+        page_size=500,
+    ):
+        offset = (page_number - 1) * page_size
+
+        conditions = [
+            lambda q: q.filter(
+                func.date(DunningLetterValidation.ValidationDate) == validation_date
+            ),
+            lambda q: q.filter(cast(DunningLetterValidation.RunId, String) == str(submission_id)),
+            lambda q: q.filter(
+                DunningLetterValidation.ConditionName != "RequestDunningLetter"
+            ),
+        ]
+
+        dunning_validation_records = self.db.get_with_condition(
+            DunningLetterValidation,
+            conditions,
+            orderby=(DunningLetterValidation.IPR, "asc"),
+            offset=offset,
+            limit=page_size,
+        )
+
+        return [
+            {
+                "IPR": dvr.IPR,
+                "Log": dvr.Log,
+                "FileName": dvr.FileName,
+            }
+            for dvr in dunning_validation_records
+        ]

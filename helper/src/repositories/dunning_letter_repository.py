@@ -109,3 +109,28 @@ class DunningLetterRepository(AbstractRepository):
             return dunning_letters[0]
 
         return None
+
+    def get_dunning_letters_by_request_date_with_pagination(self, request_date: date, submission_id, page_number=1, page_size=50):
+        offset = (page_number - 1) * page_size
+
+        conditions = [
+            lambda q: q.filter(func.date(DunningLetter.RequestDateTime) == request_date),
+            lambda q: q.filter(cast(DunningLetter.RunId, String) == str(submission_id)),
+        ]
+
+        letters = self.db.get_with_condition(
+            DunningLetter,
+            conditions,
+            orderby=(DunningLetter.IPR, "asc"),
+            offset=offset,
+            limit=page_size,
+        )
+
+        return [
+            {
+                "IPR": letter.IPR,
+                "RequestSubmissionStatus": letter.RequestSubmissionStatus,
+                "FileName": letter.FileName,
+            }
+            for letter in letters
+        ]
