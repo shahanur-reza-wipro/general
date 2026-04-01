@@ -95,3 +95,17 @@ class DunningLetterRepository(AbstractRepository):
                 .all()
             )
         return ids or None
+
+    def get_dunning_by_opentext_ipr_and_date(self, ipr, request_date, submission_id):
+        conditions = [
+            lambda q: q.filter(DunningLetter.OpenTextIPR == ipr),
+            lambda q: q.filter(func.date(DunningLetter.RequestDateTime) == request_date),
+            lambda q: q.filter(cast(DunningLetter.RunId, String) == str(submission_id)),
+        ]
+
+        dunning_letters = self.db.get_with_condition(DunningLetter, conditions)
+
+        if dunning_letters:
+            return dunning_letters[0]
+
+        return None

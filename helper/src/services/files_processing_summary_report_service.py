@@ -815,7 +815,7 @@ class FilesProcessingSummaryReportService:
                 "ipr_status_list": response,
             }
 
-            self.assignment_requests_sqs_helper.send_message(
+            self.send_to_sqs(
                 json.dumps(sqs_message_body, default=Utility.json_serializer)
             )
 
@@ -855,7 +855,7 @@ class FilesProcessingSummaryReportService:
                 "ipr_status_list": response,
             }
 
-            self.dunning_requests_sqs_helper.send_message(
+            self.send_to_sqs(
                 json.dumps(sqs_message_body, default=Utility.json_serializer)
             )
 

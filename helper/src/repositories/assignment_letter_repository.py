@@ -95,3 +95,17 @@ class AssignmentLetterRepository(AbstractRepository):
                 .all()
             )
         return ids or None
+
+    def get_assignment_by_opentext_ipr_and_date(self, ipr, request_date, submission_id):
+        conditions = [
+            lambda q: q.filter(AssignmentLetter.OpenTextIPR == ipr),
+            lambda q: q.filter(func.date(AssignmentLetter.RequestDateTime) == request_date),
+            lambda q: q.filter(cast(AssignmentLetter.RunId, String) == str(submission_id)),
+        ]
+
+        assignment_letters = self.db.get_with_condition(AssignmentLetter, conditions)
+
+        if assignment_letters:
+            return assignment_letters[0]
+
+        return None
