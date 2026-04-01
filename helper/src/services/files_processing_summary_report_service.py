@@ -4,6 +4,7 @@ import logging
 import http.client
 import json
 import ssl
+import uuid
 
 from repositories import (
     StatementRepository,
@@ -199,8 +200,10 @@ class FilesProcessingSummaryReportService:
 
         try:
             self.queue_for_statement_update_from_open_text_response()
+            self.queue_for_assignment_update_from_open_text_response()
+            self.queue_for_dunning_update_from_open_text_response()
         except Exception:
-            log.info("Could not queue messages for statement update from OpenText.")
+            log.info("Could not queue messages for OpenText response update.")
 
         self.cleanup_opentext()
 
@@ -289,9 +292,12 @@ class FilesProcessingSummaryReportService:
         if total_requests == 0 or not submission_id:
             return 0
 
+        request_type = "totalProcessed"
+        endpoint_url = self.get_report_endpoint_url(document_type)
+
         xml_string = f"""
         <Document>
-            <requestType>totalProcessed</requestType>
+            <requestType>{request_type}</requestType>
             <submissionId>{submission_id}</submissionId>
             <totalRequests>{total_requests}</totalRequests>
         </Document>
@@ -299,9 +305,15 @@ class FilesProcessingSummaryReportService:
 
         base64_encoded_request = self.encode_xml_to_base64_with_padding(xml_string)
 
+        log.info(
+            f"Fetching total processed from OpenText for {document_type}: "
+            f"requestType={request_type}, submissionId={submission_id}, "
+            f"totalRequests={total_requests}, endpoint={endpoint_url}"
+        )
+
         open_text_response = self.get_opentext_response(
             base64_encoded_request,
-            self.get_report_endpoint_url(document_type),
+            endpoint_url,
         )
 
         try:
@@ -382,6 +394,17 @@ class FilesProcessingSummaryReportService:
             or self.configuration.opentextDunningReportUrl
         )
 
+    def _with_cache_buster(self, endpoint_url):
+        from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+
+        request_nonce = uuid.uuid4().hex
+        parsed_url = urlparse(endpoint_url)
+        query_params = parse_qsl(parsed_url.query, keep_blank_values=True)
+        query_params.append(("_cb", request_nonce))
+        refreshed_url = urlunparse(parsed_url._replace(query=urlencode(query_params)))
+
+        return refreshed_url, request_nonce
+
     def get_opentext_response(self, base64_encoded_request, endpoint_url):
 
         ssl_context = ssl._create_unverified_context()
@@ -395,14 +418,25 @@ class FilesProcessingSummaryReportService:
             }
         )
 
+        refreshed_endpoint_url, request_nonce = self._with_cache_buster(endpoint_url)
+
         authentication_ticket = self.get_authentication_token()
 
         headers = {
             "OTDSTicket": f"{authentication_ticket}",
             "Content-Type": "application/json",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "X-Request-Id": request_nonce,
+            "X-Request-Timestamp": datetime.datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
         }
 
-        host, path = Utility.extract_host_and_path(endpoint_url)
+        host, path = Utility.extract_host_and_path(refreshed_endpoint_url)
+
+        log.info(
+            f"Sending fresh OpenText request with nonce={request_nonce} to endpoint={refreshed_endpoint_url}"
+        )
 
         conn = http.client.HTTPSConnection(host, context=ssl_context)
 
@@ -580,9 +614,9 @@ class FilesProcessingSummaryReportService:
             self.get_report_endpoint_url(document_type),
         )
 
-        return self.parse_request_status_response(open_text_response)
+        return self.parse_request_status_response(open_text_response, document_type)
 
-    def parse_request_status_response(self, open_text_response):
+    def parse_request_status_response(self, open_text_response, document_type):
         response_items = (
             open_text_response.get("data", {}).get("result", [])
             if isinstance(open_text_response, dict)
@@ -593,29 +627,45 @@ class FilesProcessingSummaryReportService:
             return []
 
         first_result = response_items[0] if isinstance(response_items[0], dict) else {}
+        if not first_result:
+            return []
 
-        ipr_statuses = first_result.get("IPRStatus", [])
-        if isinstance(ipr_statuses, dict):
-            ipr_statuses = [ipr_statuses]
+        ipr_values = self._extract_colon_values_from_keys(
+            first_result,
+            ["IPR"],
+        )
+        if not ipr_values:
+            return []
+
+        status_keys_by_type = {
+            "statement": ["StatementProcessingStatus"],
+            "assignment": ["AssignmentProcessingStatus"],
+            "dunning": ["DunningProcessingStatus"],
+        }
+        fallback_status_keys = ["DocumentProcessingStatus", "documentProcessingStatus", "ProcessingStatus", "processingStatus"]
+        status_values = self._extract_colon_values_from_keys(
+            first_result,
+            status_keys_by_type.get(document_type, []) + fallback_status_keys,
+        )
+
+        reason_keys_by_type = {
+            "statement": ["ReasonForFailure"],
+            "assignment": ["AssignmentFailureReason"],
+            "dunning": ["DunningFailureReason"],
+        }
+        reason_values = self._extract_colon_values_from_keys(
+            first_result,
+            reason_keys_by_type.get(document_type, []),
+        )
 
         normalized = []
-
-        for item in ipr_statuses:
-            if not isinstance(item, dict):
-                continue
-
-            ipr = self.normalize_ipr(
-                item.get("IPR")
-                or item.get("ipr")
-                or item.get("OpenTextIPR")
-                or item.get("openTextIPR")
-            )
-
+        for index, raw_ipr in enumerate(ipr_values):
+            ipr = self.normalize_ipr(raw_ipr)
             if not ipr:
                 continue
 
-            processing_status = self.extract_processing_status(item)
-            reason_for_failure = self.extract_failure_reason(item)
+            processing_status = status_values[index] if index < len(status_values) else ""
+            reason_for_failure = reason_values[index] if index < len(reason_values) else ""
 
             normalized.append(
                 {
@@ -627,34 +677,28 @@ class FilesProcessingSummaryReportService:
 
         return normalized
 
-    def extract_processing_status(self, item):
-        status_value = (
-            item.get("statementProcessingStatus")
-            or item.get("assignmentProcessingStatus")
-            or item.get("dunningProcessingStatus")
-            or item.get("documentProcessingStatus")
-            or item.get("ProcessingStatus")
-            or item.get("processingStatus")
-        )
+    def _extract_colon_values_from_keys(self, item, candidate_keys):
+        for key in candidate_keys:
+            if key not in item:
+                continue
+            return self._split_colon_values(item.get(key))
+        return []
 
-        if isinstance(status_value, list):
-            return status_value[0] if status_value else None
+    def _split_colon_values(self, raw_value):
+        if raw_value is None:
+            return []
 
-        return status_value
+        if isinstance(raw_value, list):
+            raw_value = raw_value[0] if raw_value else ""
 
-    def extract_failure_reason(self, item):
-        reason = (
-            item.get("Reason for Failure")
-            or item.get("Reason For Failure")
-            or item.get("reasonForFailure")
-            or item.get("failureReason")
-            or item.get("FailureReason")
-        )
+        if isinstance(raw_value, dict):
+            raw_value = raw_value.get("value", "")
 
-        if isinstance(reason, list):
-            return reason[0] if reason else ""
+        if raw_value is None:
+            return []
 
-        return reason or ""
+        text = str(raw_value)
+        return [segment.strip() for segment in text.split(":")]
 
     def normalize_processing_status(self, status):
         if Utility.is_none_or_empty(status):
@@ -737,6 +781,86 @@ class FilesProcessingSummaryReportService:
 
         log.info(
             f"{len(statement_rows)} IPRs have been queued for statement update from OpenText response."
+        )
+
+        return None
+
+    def queue_for_assignment_update_from_open_text_response(self):
+        assignment_submission_ids = self._get_submission_ids("assignment")
+        assignment_submission_id = assignment_submission_ids[0] if assignment_submission_ids else ""
+        if not assignment_submission_id:
+            return None
+
+        assignment_rows = []
+        for row in self.consolidated_ipr_status_list:
+            if Utility.is_none_or_empty(row.get("Assignment Processing Status")):
+                continue
+            assignment_rows.append(
+                {
+                    "IPR": row.get("IPR"),
+                    "Assignment Processing Status": row.get("Assignment Processing Status"),
+                    "Reason For Failure": row.get("Assignment Failure Reason"),
+                }
+            )
+
+        if not assignment_rows:
+            return None
+
+        chunked_responses = Utility.chunk_data(assignment_rows, 100)
+
+        for response in chunked_responses:
+            sqs_message_body = {
+                "document_type": "assignment",
+                "submission_id": str(assignment_submission_id),
+                "ipr_status_list": response,
+            }
+
+            self.assignment_requests_sqs_helper.send_message(
+                json.dumps(sqs_message_body, default=Utility.json_serializer)
+            )
+
+        log.info(
+            f"{len(assignment_rows)} IPRs have been queued for assignment update from OpenText response."
+        )
+
+        return None
+
+    def queue_for_dunning_update_from_open_text_response(self):
+        dunning_submission_ids = self._get_submission_ids("dunning")
+        dunning_submission_id = dunning_submission_ids[0] if dunning_submission_ids else ""
+        if not dunning_submission_id:
+            return None
+
+        dunning_rows = []
+        for row in self.consolidated_ipr_status_list:
+            if Utility.is_none_or_empty(row.get("Dunning Processing Status")):
+                continue
+            dunning_rows.append(
+                {
+                    "IPR": row.get("IPR"),
+                    "Dunning Processing Status": row.get("Dunning Processing Status"),
+                    "Reason For Failure": row.get("Dunning Failure Reason"),
+                }
+            )
+
+        if not dunning_rows:
+            return None
+
+        chunked_responses = Utility.chunk_data(dunning_rows, 100)
+
+        for response in chunked_responses:
+            sqs_message_body = {
+                "document_type": "dunning",
+                "submission_id": str(dunning_submission_id),
+                "ipr_status_list": response,
+            }
+
+            self.dunning_requests_sqs_helper.send_message(
+                json.dumps(sqs_message_body, default=Utility.json_serializer)
+            )
+
+        log.info(
+            f"{len(dunning_rows)} IPRs have been queued for dunning update from OpenText response."
         )
 
         return None
