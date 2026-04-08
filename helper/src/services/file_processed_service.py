@@ -7,6 +7,7 @@ import logging
 from services.statement_orchestration_service import StatementOrchestrationService
 from services.assignment_letter_orchestration_service import AssignmentLetterOrchestrationService
 from services.dunning_letter_orchestration_service import DunningLetterOrchestrationService
+from services.files_processing_status_report_scheduler_service import FilesProcessingStatusReportSchedulerService
 from utilities.coniguration import Configuration
 from utilities.utility import Utility
 from .notification_service import NotificationService
@@ -29,6 +30,7 @@ class FileProcessedService:
         self.run_batch_repository = RunBatchRepository()
         self.debtor_file_validation_repository = DebtorFileValidationRepository()
         self.transaction_file_validation_repository = TransactionFileValidationRepository()
+        self.files_processing_status_report_scheduler_service = FilesProcessingStatusReportSchedulerService()
 
         self.configuration = Configuration()
         self.file_type = None
@@ -76,6 +78,10 @@ class FileProcessedService:
 
                 notification_result = self.send_notification(run_control)
 
+                if not self.hasFileProcessedPreviously:
+                    self.schedule_processing_status_report(run_control)
+                    self.schedule_summary_report(run_control)
+
                 if self.hasFileProcessedPreviously:
                     self.run_batch_repository.delete_all()
                     return
@@ -121,6 +127,38 @@ class FileProcessedService:
                     )
 
         return notification_result
+
+    def schedule_processing_status_report(self, run_control):
+        if self.configuration.isLocal:
+            log.info("Local mode enabled. Skipping EventBridge scheduling for processing status report.")
+            return
+
+        payload = {
+            "submission_id": str(run_control.ID)
+        }
+
+        self.files_processing_status_report_scheduler_service.schedule_statement_status_report_generation(
+            self.configuration.fileProcessedReportGeneratorLambdaDetailsSecretName,
+            self.configuration.processingReportGenerationAttemptInterval,
+            True,
+            payload
+        )
+
+    def schedule_summary_report(self, run_control):
+        if self.configuration.isLocal:
+            log.info("Local mode enabled. Skipping EventBridge scheduling for summary report.")
+            return
+
+        payload = {
+            "submission_id": str(run_control.ID)
+        }
+
+        self.files_processing_status_report_scheduler_service.schedule_statement_status_report_generation(
+            self.configuration.fileSummaryReportGeneratorLambdaDetailsSecretName,
+            self.configuration.summaryReportGenerationAttemptInterval,
+            False,
+            payload
+        )
 
     def send_notification(self, run_control):
         debtor_file_validation_log = self.debtor_file_validation_repository.get_by_filename(

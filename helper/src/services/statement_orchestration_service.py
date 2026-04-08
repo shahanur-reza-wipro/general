@@ -3,7 +3,6 @@ import logging
 from typing import List
 
 from repositories import DebtorRepository
-from services.files_processing_status_report_scheduler_service import FilesProcessingStatusReportSchedulerService
 from utilities.coniguration import Configuration
 from utilities.sqs_helper import SQSHelper
 
@@ -18,7 +17,6 @@ class StatementOrchestrationService:
         self.configuration = Configuration().get_config()
         self.orchestration_queue_name = self.configuration.orchestratorQueueName
         self.integrationConfigSecretName = self.configuration.integrationConfigSecretName
-        self.statement_generation_status_checker_service = FilesProcessingStatusReportSchedulerService()
 
     def queue_to_validate_statement_generation(self, chunk_size=30):
         debtors = self.debtor_repository.get_all()
@@ -46,29 +44,6 @@ class StatementOrchestrationService:
                 )
 
                 queued_list_of_debtors.append(queued_iprs)
-
-            payload = {
-                "submission_id": str(submission_id)
-            }
-
-            if self.configuration.isLocal:
-                logger.info("Local mode enabled. Skipping EventBridge scheduling for statement reports.")
-            else:
-                # schedule file processing report generation lambda for every 5 mins
-                self.statement_generation_status_checker_service.schedule_statement_status_report_generation(
-                    self.configuration.fileProcessedReportGeneratorLambdaDetailsSecretName,
-                    self.configuration.processingReportGenerationAttemptInterval,
-                    True,
-                    payload
-                )
-
-                # schedule file summary report generation lambda for every 60 mins
-                self.statement_generation_status_checker_service.schedule_statement_status_report_generation(
-                    self.configuration.fileSummaryReportGeneratorLambdaDetailsSecretName,
-                    self.configuration.summaryReportGenerationAttemptInterval,
-                    False,
-                    payload
-                )
 
             return queued_list_of_debtors, submission_id
 
