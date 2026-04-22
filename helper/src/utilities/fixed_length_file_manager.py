@@ -1,42 +1,35 @@
-from utilities.coniguration import Configuration
+from utilities.configuration import Configuration
 from .schema_manager import Schema
 
+
 class FixedLengthFileReader:
-    def _parse_line(self, line, schema: Schema):
-        raw_line = line.rstrip("\r\n")
-        record = {}
-        properties = schema.get_model_properties()
-        starts = schema.get_field_starts()
-        lengths = schema.get_field_lengths()
-
-        for property_name, start, length in zip(properties, starts, lengths):
-            start_index = start - 1
-            end_index = start_index + length
-            record[property_name] = raw_line[start_index:end_index].strip()
-
-        # Preserve source record details for positional validation handlers.
-        record["_raw_line"] = raw_line
-        record["_raw_line_length"] = len(raw_line)
-
-        return record
 
     def get_record(self, lines, schema: Schema, line_number):
+        is_local = Configuration().get_config().isLocal
         sequence_number = 1
         for line in lines:
             if line == "" or line == "\n":
                 continue
-            record = self._parse_line(line, schema)
+
+            raw_line = line.rstrip("\r\n")
+            record = {}
+            start_index = 0
+            for property, length in zip(schema.get_model_properties(),
+                                        schema.get_field_lengths()):
+                record[property] = raw_line[start_index:start_index + length].strip()
+                start_index += length + 1
+
             record["SeqId"] = sequence_number
+            record["_raw_line"] = raw_line
+            record["_raw_line_length"] = len(raw_line)
 
             if line_number == sequence_number:
-                if hasattr(lines, "seek"):
+                if is_local:
                     lines.seek(0)
                 return record
             else:
                 sequence_number += 1
                 continue
-
-
 
     def get_records(self, lines, schema: Schema):
         records = []
@@ -44,10 +37,21 @@ class FixedLengthFileReader:
         for line in lines:
             if line == "" or line == "\n":
                 continue
-            record = self._parse_line(line, schema)
+
+            raw_line = line.rstrip("\r\n")
+            record = {}
+            start_index = 0
+            for property, length in zip(schema.get_model_properties(),
+                                        schema.get_field_lengths()):
+                record[property] = raw_line[start_index:start_index + length].strip()
+                start_index += length + 1
+
             record["SeqId"] = sequence_number
+            record["_raw_line"] = raw_line
+            record["_raw_line_length"] = len(raw_line)
             sequence_number += 1
             records.append(record)
-        
+
         return records
-            
+
+ 
