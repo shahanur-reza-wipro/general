@@ -86,7 +86,7 @@ class DebtorService:
                 for value in record.items():
                     property_name = value[0]
                     data = value[1]
-                    if property_name:
+                    if property_name and not property_name.startswith("_"):
                         if property_name in ["CallsOptOut"]:
                             data = data == "Y"
                         if property_name in ["StmFlag"]:
@@ -110,6 +110,8 @@ class DebtorService:
             )
 
             debtor = Debtor(**debtor_kwargs)
+            debtor._raw_line = record.get("_raw_line")
+            debtor._raw_line_length = record.get("_raw_line_length")
             debtors.append(debtor)
 
         return debtors

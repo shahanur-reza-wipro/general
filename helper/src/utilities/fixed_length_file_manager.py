@@ -3,6 +3,7 @@ from .schema_manager import Schema
 
 class FixedLengthFileReader:
     def _parse_line(self, line, schema: Schema):
+        raw_line = line.rstrip("\r\n")
         record = {}
         properties = schema.get_model_properties()
         starts = schema.get_field_starts()
@@ -11,7 +12,11 @@ class FixedLengthFileReader:
         for property_name, start, length in zip(properties, starts, lengths):
             start_index = start - 1
             end_index = start_index + length
-            record[property_name] = line[start_index:end_index].strip()
+            record[property_name] = raw_line[start_index:end_index].strip()
+
+        # Preserve source record details for positional validation handlers.
+        record["_raw_line"] = raw_line
+        record["_raw_line_length"] = len(raw_line)
 
         return record
 

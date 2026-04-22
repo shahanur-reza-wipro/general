@@ -46,6 +46,16 @@ class RecordConditionGenerationHandler:
         log_id = self.logging_repository.add(log)
         return str(log_id)
 
+    def get_end_field_position(self, record):
+        schema = self._schema_manager.get_schema_by_model_name(type(record).__name__)
+        if not schema:
+            return None
+
+        for field in schema.fields:
+            if field.modelProperty == "EndField":
+                return field.start + field.length - 1
+        return None
+
 class CheckInvalidIPRHandler(RecordConditionGenerationHandler):
     def handle(self, record, record_validation_info, validation_logger, invalid_iprs):
         if '' in [record.ClientNumber, record.ClientAgreementNumber, record.DebtorNumber, record.AccountNumber]:
@@ -58,10 +68,40 @@ class CheckInvalidIPRHandler(RecordConditionGenerationHandler):
 
 class EndWithXHandler(RecordConditionGenerationHandler):
     def handle(self, record, record_validation_info, validation_logger, invalid_iprs):
-        if record.EndField != 'X':
+        expected_end_position = self.get_end_field_position(record)
+        raw_line = getattr(record, "_raw_line", None)
+        raw_line_length = getattr(record, "_raw_line_length", None)
+
+        has_valid_end_value = record.EndField == 'X'
+        has_valid_end_position = True
+
+        if expected_end_position is not None and raw_line_length is not None:
+            has_valid_end_position = raw_line_length == expected_end_position
+
+        if expected_end_position is not None and raw_line is not None:
+            has_expected_char_position = len(raw_line) >= expected_end_position
+            has_valid_end_position = (
+                has_valid_end_position
+                and has_expected_char_position
+                and raw_line[expected_end_position - 1] == 'X'
+            )
+
+        if not has_valid_end_value or not has_valid_end_position:
             record_condition = self.record_conditions.get_condition(RecordConditions.END_WITH_X)
             invalid_iprs.append(record.IPR)
-            error_msg = f"{record_condition['logMessage']} at line {record.SeqId}: for EndField."
+
+            if expected_end_position is None or raw_line_length is None:
+                position_details = "position check unavailable"
+            else:
+                position_details = (
+                    f"expected end position {expected_end_position}, "
+                    f"actual record length {raw_line_length}"
+                )
+
+            error_msg = (
+                f"{record_condition['logMessage']} at line {record.SeqId}: "
+                f"expected EndField 'X' at the last configured position ({position_details})."
+            )
             super().log_record_operation(record, record_validation_info, validation_logger, record_condition, error_msg)
             return False
         return super().handle(record, record_validation_info, validation_logger, invalid_iprs)

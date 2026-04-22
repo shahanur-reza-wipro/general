@@ -127,7 +127,7 @@ class TransactionService:
             for value in record.items():
                 property_name = value[0]
                 data = value[1]
-                if property_name:
+                if property_name and not property_name.startswith("_"):
                     if property_name in ["Disputed", "Overdue"]:
                         data = data == "Y"
                     elif property_name in ["ItemBalance", "ItemAmount"]:
@@ -145,6 +145,8 @@ class TransactionService:
             )
             transaction_dict["RunId"] = run_id
             transaction = Transaction(**transaction_dict)
+            transaction._raw_line = record.get("_raw_line")
+            transaction._raw_line_length = record.get("_raw_line_length")
             transactions.append(transaction)
 
         return transactions
