@@ -4,7 +4,7 @@
 This document describes the current runtime architecture of the Python codebase under `src`, focused on:
 - File ingestion and validation
 - Debtor/transaction persistence
-- Statement generation orchestration
+- Statement, assignment letter, and dunning letter orchestration
 - OpenText submission and response handling
 - Operational reporting
 
@@ -21,43 +21,75 @@ The solution follows a layered, event-driven style:
 ```mermaid
 flowchart LR
     S3[(Amazon S3\nExtract files)] --> L1[Lambda\nfiledataingestor]
+  L1 --> SNS1[SNS\nFile Received Notification]
 
-    L1 --> SV1[DebtorService / TransactionService]
-    SV1 --> DB[(PostgreSQL)]
+  L1 --> SV1[DebtorService / TransactionService]
+  SV1 --> RV[Record-level validation complete]
+  RV --> DB[(PostgreSQL)]
+  RV --> FP[FileProcessedService]
+  FP --> SNS2[SNS\nFiles Processing Notification]
+  FP --> SCH[EventBridge\nSchedule Creation]
 
-    SV1 -->|queue chunks of IPRs| Q1[(SQS\nOrchestrator Queue)]
+  FP -->|queue chunks of IPRs + run_id| Q1[(SQS\nStatement Orchestrator Queue)]
     Q1 --> L2[Lambda\nstatementvalidator]
 
     L2 --> SV2[StatementValidationService]
     SV2 --> DB
-    SV2 -->|queue request_id| Q2[(SQS\nRequests Queue)]
+  SV2 -->|queue request_id| Q2[(SQS\nStatement Requests Queue)]
 
     Q2 --> L3[Lambda\nstatementrequestsubmitter]
     L3 --> SV3[StatementRequestSubmissionService]
     SV3 --> OT[(OpenText APIs)]
     SV3 --> DB
 
-    E1[(EventBridge Schedule)] --> L4[Lambda\nfilesprocessedreportgenerator]
-    E1 --> L5[Lambda\nfilessummaryreportgenerator]
+  FP -->|queue chunks of IPRs + run_id| QA1[(SQS\nAssignment Orchestrator Queue)]
+  QA1 --> LA1[Lambda\nassignmentlettervalidator]
+  LA1 --> ASV[AssignmentLetterValidationService]
+  ASV --> DB
+  ASV -->|queue request_id| QA2[(SQS\nAssignment Requests Queue)]
+  QA2 --> LA2[Lambda\nassignmentletterrequestsubmitter]
+  LA2 --> ASS[AssignmentLetterSubmissionService]
+  ASS --> OT
+  ASS --> DB
+
+  FP -->|queue chunks of IPRs + run_id| QD1[(SQS\nDunning Orchestrator Queue)]
+  QD1 --> LD1[Lambda\ndunninglettervalidator]
+  LD1 --> DSV[DunningLetterValidationService]
+  DSV --> DB
+  DSV -->|queue request_id| QD2[(SQS\nDunning Requests Queue)]
+  QD2 --> LD2[Lambda\ndunningletterrequestsubmitter]
+  LD2 --> DSS[DunningLetterSubmissionService]
+  DSS --> OT
+  DSS --> DB
+
+  SCH --> E1[(EventBridge Schedule)]
+  E1 --> L4[Lambda\nfilesprocessedreportgenerator]
+  E1 --> L5[Lambda\nfilessummaryreportgenerator]
 
     L4 --> SV4[FilesProcessingStatusReportService]
     L5 --> SV5[FilesProcessingSummaryReportService]
 
     SV4 --> SES[(SES Email)]
     SV5 --> SES
-    SV5 -->|queue ipr_status_list| Q3[(SQS\nStatements Queue)]
+  SV5 -->|queue ipr_status_list| Q3[(SQS\nStatements Queue)]
+  SV5 -->|queue ipr_status_list| Q4[(SQS\nAssignments Queue)]
+  SV5 -->|queue ipr_status_list| Q5[(SQS\nDunnings Queue)]
 
     Q3 --> L6[Lambda\nopentextresponseupdater]
-    L6 --> SV6[StatementResponseService]
+  Q4 --> L6
+  Q5 --> L6
+  L6 --> SV6[Response Services\nStatementResponseService\nAssignmentLetterResponseService\nDunningLetterResponseService]
     SV6 --> DB
 
-    SM[(Secrets Manager)] --> SV1
+  SM[(Secrets Manager)] --> SV1
     SM --> SV2
     SM --> SV3
+  SM --> ASV
+  SM --> ASS
+  SM --> DSV
+  SM --> DSS
     SM --> SV4
     SM --> SV5
-
-    SV1 --> SNS["SNS notifications"]
 
     classDef storage fill:#DBEAFE,stroke:#2563EB,color:#0F172A,stroke-width:1.5px;
     classDef lambda fill:#EDE9FE,stroke:#7C3AED,color:#111827,stroke-width:1.5px;
@@ -67,11 +99,11 @@ flowchart LR
     classDef integration fill:#FCE7F3,stroke:#BE185D,color:#111827,stroke-width:1.5px;
 
     class S3 storage;
-    class L1,L2,L3,L4,L5,L6 lambda;
-    class SV1,SV2,SV3,SV4,SV5,SV6 service;
-    class Q1,Q2,Q3 queue;
+  class L1,L2,L3,LA1,LA2,LD1,LD2,L4,L5,L6 lambda;
+  class SV1,RV,FP,SCH,SV2,SV3,ASV,ASS,DSV,DSS,SV4,SV5,SV6 service;
+  class Q1,Q2,QA1,QA2,QD1,QD2,Q3,Q4,Q5 queue;
     class DB data;
-    class OT,SM,SNS,SES,E1 integration;
+  class OT,SM,SNS1,SNS2,SES,E1 integration;
 ```
 
 ## 4) Code-level layered view
@@ -81,9 +113,15 @@ flowchart TB
       LF1[filedataingestor.py]
       LF2[statementvalidator.py]
       LF3[statementrequestsubmitter.py]
-      LF4[filesprocessedreportgenerator.py]
-      LF5[filessummaryreportgenerator.py]
-      LF6[opentextresponseupdater.py]
+      LF4[assignmentlettervalidator.py]
+      LF5[assignmentletterrequestsubmitter.py]
+      LF6[dunninglettervalidator.py]
+      LF7[dunningletterrequestsubmitter.py]
+      LF8[opentextresponseupdater.py]
+      LF9[filesprocessedreportgenerator.py]
+      LF10[filessummaryreportgenerator.py]
+      LF11[sftpoperation.py]
+      LF12[dssdboperation.py]
     end
 
     subgraph Services
@@ -92,24 +130,48 @@ flowchart TB
       S3[RecordValidationService]
       S4[DebtorService]
       S5[TransactionService]
-      S6[StatementOrchestrationService]
-      S7[StatementValidationService]
-      S8[StatementRequestSubmissionService]
-      S9[StatementResponseService]
-      S10[FilesProcessingStatusReportService]
-      S11[FilesProcessingSummaryReportService]
-      S12[NotificationService]
+      S6[FileProcessedService]
+      S7[StatementOrchestrationService]
+      S8[AssignmentLetterOrchestrationService]
+      S9[DunningLetterOrchestrationService]
+      S10[StatementValidationService]
+      S11[AssignmentLetterValidationService]
+      S12[DunningLetterValidationService]
+      S13[StatementRequestSubmissionService]
+      S14[AssignmentLetterSubmissionService]
+      S15[DunningLetterSubmissionService]
+      S16[StatementResponseService]
+      S17[AssignmentLetterResponseService]
+      S18[DunningLetterResponseService]
+      S19[FilesProcessingStatusReportService]
+      S20[FilesProcessingSummaryReportService]
+      S21[NotificationService]
+      S22[FilesProcessingStatusReportSchedulerService]
+    end
+
+    subgraph Queues
+      Q1[Statement Orchestrator Queue]
+      Q2[Assignment Orchestrator Queue]
+      Q3[Dunning Orchestrator Queue]
+      Q4[Statement Requests Queue]
+      Q5[Assignment Requests Queue]
+      Q6[Dunning Requests Queue]
+      Q7[Statements Queue]
+      Q8[Assignments Queue]
+      Q9[Dunnings Queue]
     end
 
     subgraph Repositories
-      R1[DebtorRepository]
-      R2[TransactionRepository]
-      R3[RunControlRepository]
-      R4[RunBatchRepository]
+      R1[RunControlRepository]
+      R2[RunBatchRepository]
+      R3[DebtorRepository]
+      R4[TransactionRepository]
       R5[StatementRepository]
-      R6[StatementValidationRepository]
-      R7[StatementRequestRepository]
-      R8[Debtor/Transaction Validation Repos]
+      R6[StatementRequestRepository]
+      R7[AssignmentLetterRepository]
+      R8[AssignmentLetterRequestRepository]
+      R9[DunningLetterRepository]
+      R10[DunningLetterRequestRepository]
     end
 
     subgraph DataAccess
@@ -127,28 +189,49 @@ flowchart TB
 
     LF1 --> S1 --> S4
     LF1 --> S1 --> S5
-    LF2 --> S7
-    LF3 --> S8
-    LF4 --> S10
-    LF5 --> S11
-    LF6 --> S9
+    S4 --> S6
+    S5 --> S6
+
+    S6 --> S7 --> Q1 --> LF2 --> S10 --> Q4 --> LF3 --> S13
+    S6 --> S8 --> Q2 --> LF4 --> S11 --> Q5 --> LF5 --> S14
+    S6 --> S9 --> Q3 --> LF6 --> S12 --> Q6 --> LF7 --> S15
+
+    S20 --> Q7 --> LF8 --> S16
+    S20 --> Q8 --> LF8 --> S17
+    S20 --> Q9 --> LF8 --> S18
+
+    LF9 --> S19 --> S21
+    LF10 --> S20 --> S21
+    S6 --> S22 --> U5
+    LF11 --> U7
+    LF12 --> D1
 
     S4 --> S2
     S4 --> S3
     S5 --> S2
     S5 --> S3
-    S4 --> R1
-    S5 --> R2
-    S2 --> R3
-    S2 --> R4
-    S7 --> R5
-    S7 --> R6
-    S7 --> R7
-    S8 --> R5
-    S8 --> R7
-    S9 --> R5
-    S10 --> R8
+
+    S4 --> R3
+    S5 --> R4
+    S6 --> R1
+    S6 --> R2
     S10 --> R5
+    S10 --> R6
+    S11 --> R7
+    S11 --> R8
+    S12 --> R9
+    S12 --> R10
+    S13 --> R5
+    S13 --> R6
+    S14 --> R7
+    S14 --> R8
+    S15 --> R9
+    S15 --> R10
+    S16 --> R5
+    S17 --> R7
+    S18 --> R9
+    S19 --> R5
+    S20 --> R5
 
     R1 --> D1
     R2 --> D1
@@ -158,25 +241,34 @@ flowchart TB
     R6 --> D1
     R7 --> D1
     R8 --> D1
+    R9 --> D1
+    R10 --> D1
     D1 --> D2
 
     S1 --> U1
-    S7 --> U2
+    S13 --> U2
+    S14 --> U2
+    S15 --> U2
+    S19 --> U2
+    S20 --> U2
     S6 --> U3
+    S21 --> U3
     S2 --> U4
     S4 --> U5
 
     classDef entry fill:#EDE9FE,stroke:#7C3AED,color:#111827,stroke-width:1.5px;
     classDef svc fill:#CCFBF1,stroke:#0F766E,color:#0F172A,stroke-width:1.5px;
+    classDef queue fill:#FEF3C7,stroke:#D97706,color:#111827,stroke-width:1.5px;
     classDef repo fill:#DBEAFE,stroke:#2563EB,color:#0F172A,stroke-width:1.5px;
     classDef dal fill:#DCFCE7,stroke:#15803D,color:#111827,stroke-width:1.5px;
     classDef util fill:#FEF3C7,stroke:#D97706,color:#111827,stroke-width:1.5px;
 
-    class LF1,LF2,LF3,LF4,LF5,LF6 entry;
-    class S1,S2,S3,S4,S5,S6,S7,S8,S9,S10,S11,S12 svc;
-    class R1,R2,R3,R4,R5,R6,R7,R8 repo;
+    class LF1,LF2,LF3,LF4,LF5,LF6,LF7,LF8,LF9,LF10,LF11,LF12 entry;
+    class S1,S2,S3,S4,S5,S6,S7,S8,S9,S10,S11,S12,S13,S14,S15,S16,S17,S18,S19,S20,S21,S22 svc;
+    class Q1,Q2,Q3,Q4,Q5,Q6,Q7,Q8,Q9 queue;
+    class R1,R2,R3,R4,R5,R6,R7,R8,R9,R10 repo;
     class D1,D2 dal;
-    class U1,U2,U3,U4,U5 util;
+    class U1,U2,U3,U4,U5,U6,U7 util;
 ```
 
 ## 5) End-to-end processing sequence
@@ -186,42 +278,91 @@ sequenceDiagram
     participant S3 as Amazon S3
     participant LI as Lambda filedataingestor
     participant FS as DebtorService/TransactionService
+    participant SNS as SNS
+    participant FP as FileProcessedService
+    participant QSO as SQS Statement Orchestrator Queue
+    participant QAO as SQS Assignment Orchestrator Queue
+    participant QDO as SQS Dunning Orchestrator Queue
     participant DB as PostgreSQL
-    participant Q1 as SQS Orchestrator Queue
-    participant LV as Lambda statementvalidator
-    participant SV as StatementValidationService
-    participant Q2 as SQS Requests Queue
-    participant LS as Lambda statementrequestsubmitter
-    participant SS as StatementRequestSubmissionService
+    participant LVS as Lambda statementvalidator
+    participant SVS as StatementValidationService
+    participant QSR as SQS Statement Requests Queue
+    participant LSS as Lambda statementrequestsubmitter
+    participant SSS as StatementRequestSubmissionService
+    participant LVA as Lambda assignmentlettervalidator
+    participant SVA as AssignmentLetterValidationService
+    participant QAR as SQS Assignment Requests Queue
+    participant LSA as Lambda assignmentletterrequestsubmitter
+    participant SSA as AssignmentLetterSubmissionService
+    participant LVD as Lambda dunninglettervalidator
+    participant SVD as DunningLetterValidationService
+    participant QDR as SQS Dunning Requests Queue
+    participant LSD as Lambda dunningletterrequestsubmitter
+    participant SSD as DunningLetterSubmissionService
     participant OT as OpenText
     participant EB as EventBridge
     participant LR as Report Lambdas
     participant Q3 as SQS Statements Queue
+    participant Q4 as SQS Assignments Queue
+    participant Q5 as SQS Dunnings Queue
     participant LU as Lambda opentextresponseupdater
+    participant RS as Response Services
 
-    S3->>LI: ObjectCreated event (A* / B* extract file)
-    LI->>FS: Parse + process records
-    FS->>DB: Upsert Debtor/Transaction + RunControl/RunBatch
-    FS->>Q1: Queue IPR chunks for validation
+    S3->>LI: [1] ObjectCreated event (A* / B* extract file)
+    LI->>SNS: [2] Notify file received (processing will start shortly)
+    LI->>FS: [3] Parse + process records
+    FS->>DB: [3] Persist Debtor/Transaction + RunControl/RunBatch
+    FS->>FP: [4] Notify file processed for orchestration
+    FP->>SNS: [5] Notify files are being processed
+    FP->>EB: [6] Schedule processing status + summary report jobs
 
-    Q1->>LV: Deliver chunk messages
-    LV->>SV: Validate statement conditions
-    SV->>DB: Persist Statement + StatementValidation + StatementRequest
-    SV->>Q2: Queue request_id for OpenText submission
-
-    Q2->>LS: Deliver request_id
-    LS->>SS: Submit request body
-    SS->>OT: Auth + submit base64 XML
-    OT-->>SS: Submission result per IPR
-    SS->>DB: Update request + statement submission fields
+    par Statement branch
+      FP->>QSO: [7] Queue statement IPR chunks with run_id
+      QSO->>LVS: [8] Deliver chunk messages
+      LVS->>SVS: [8] Validate statement conditions
+      SVS->>DB: [9] Persist statement validation logs
+      SVS->>QSR: [10] Queue statement request_id
+      QSR->>LSS: [11] Deliver request_id
+      LSS->>SSS: [11] Submit request body
+      SSS->>OT: [11] Auth + submit statement payload
+      OT-->>SSS: [12] Statement submission result
+      SSS->>DB: [12] Update statement submission fields
+    and Assignment branch
+      FP->>QAO: [7] Queue assignment IPR chunks with run_id
+      QAO->>LVA: [8] Deliver chunk messages
+      LVA->>SVA: [8] Validate assignment conditions
+      SVA->>DB: [9] Persist assignment validation logs
+      SVA->>QAR: [10] Queue assignment request_id
+      QAR->>LSA: [11] Deliver request_id
+      LSA->>SSA: [11] Submit request body
+      SSA->>OT: [11] Auth + submit assignment payload
+      OT-->>SSA: [12] Assignment submission result
+      SSA->>DB: [12] Update assignment submission fields
+    and Dunning branch
+      FP->>QDO: [7] Queue dunning IPR chunks with run_id
+      QDO->>LVD: [8] Deliver chunk messages
+      LVD->>SVD: [8] Validate dunning conditions
+      SVD->>DB: [9] Persist dunning validation logs
+      SVD->>QDR: [10] Queue dunning request_id
+      QDR->>LSD: [11] Deliver request_id
+      LSD->>SSD: [11] Submit request body
+      SSD->>OT: [11] Auth + submit dunning payload
+      OT-->>SSD: [12] Dunning submission result
+      SSD->>DB: [12] Update dunning submission fields
+    end
 
     EB->>LR: Periodic trigger (status/summary)
     LR->>DB: Read progress and logs
     LR->>OT: Query processing status / totals
-    LR->>Q3: Queue consolidated IPR status chunks
+    LR->>Q3: Queue statement IPR status chunks
+    LR->>Q4: Queue assignment IPR status chunks
+    LR->>Q5: Queue dunning IPR status chunks
 
-    Q3->>LU: Deliver IPR status list
-    LU->>DB: Update final statement processing status
+    Q3->>LU: Deliver statement IPR status list
+    Q4->>LU: Deliver assignment IPR status list
+    Q5->>LU: Deliver dunning IPR status list
+    LU->>RS: Route by document_type
+    RS->>DB: Update final statement/assignment/dunning processing status
 ```
 
 ## 6) Domain/data model map
@@ -235,9 +376,20 @@ classDiagram
     class TransactionFileValidation
     class DebtorRecordValidation
     class TransactionRecordValidation
+  class FileValidationRule
+  class RecordValidationRule
+
     class StatementValidation
     class StatementRequest
     class Statement
+
+  class AssignmentLetterValidation
+  class AssignmentLetterRequest
+  class AssignmentLetter
+
+  class DunningLetterValidation
+  class DunningLetterRequest
+  class DunningLetter
 
     RunControl "1" --> "0..*" Debtor : run_id
     RunControl "1" --> "0..*" Transaction : run_id
@@ -251,6 +403,19 @@ classDiagram
     StatementRequest "1" --> "0..*" Statement : StatementRequestId
     RunControl "1" --> "0..*" Statement : RunId
     RunControl "1" --> "0..*" StatementValidation : RunId
+
+  AssignmentLetterRequest "1" --> "0..*" AssignmentLetter : AssignmentLetterRequestID
+  RunControl "1" --> "0..*" AssignmentLetter : RunId
+  RunControl "1" --> "0..*" AssignmentLetterValidation : RunId
+
+  DunningLetterRequest "1" --> "0..*" DunningLetter : DunningLetterRequestID
+  RunControl "1" --> "0..*" DunningLetter : RunId
+  RunControl "1" --> "0..*" DunningLetterValidation : RunId
+
+  FileValidationRule "1" --> "0..*" DebtorFileValidation : ConditionName
+  FileValidationRule "1" --> "0..*" TransactionFileValidation : ConditionName
+  RecordValidationRule "1" --> "0..*" DebtorRecordValidation : ConditionName
+  RecordValidationRule "1" --> "0..*" TransactionRecordValidation : ConditionName
 ```
 
 ## 7) Validation pipelines (chain-of-responsibility)
@@ -259,6 +424,8 @@ flowchart LR
     FV[FileValidator]
     RC[RecordValidator]
     SG[StatementGenerationHandler chain]
+  AG[AssignmentLetterGenerationHandler chain]
+  DG[DunningLetterGenerationHandler chain]
 
     FV --> FV1[FilenameAndType]
     FV1 --> FV2[FileProcessed]
@@ -279,11 +446,26 @@ flowchart LR
     SG7 --> SG8[DebtorEmail]
     SG8 --> SG9[RequestStatementGeneration]
 
+    AG --> AG1[AssignmentAlreadyRequestedToday]
+    AG1 --> AG2[InpaymentDetails]
+    AG2 --> AG3[AssignmentDue]
+    AG3 --> AG4[CreditControllerDetails]
+    AG4 --> AG5[DebtorEmail]
+    AG5 --> AG6[RequestAssignmentLetter]
+
+    DG --> DG1[DunningAlreadyRequestedToday]
+    DG1 --> DG2[DunningFlag]
+    DG2 --> DG3[DunningCycleCode]
+    DG3 --> DG4[AccountBalance]
+    DG4 --> DG5[CreditControllerDetails]
+    DG5 --> DG6[DebtorEmail]
+    DG6 --> DG7[RequestDunningLetter]
+
     classDef pipeline fill:#E0E7FF,stroke:#4338CA,color:#111827,stroke-width:1.5px;
     classDef condition fill:#F5F3FF,stroke:#7C3AED,color:#111827,stroke-width:1.5px;
 
-    class FV,RC,SG pipeline;
-    class FV1,FV2,FV3,FV4,RC1,RC2,RC3,SG1,SG2,SG3,SG4,SG5,SG6,SG7,SG8,SG9 condition;
+    class FV,RC,SG,AG,DG pipeline;
+    class FV1,FV2,FV3,FV4,RC1,RC2,RC3,SG1,SG2,SG3,SG4,SG5,SG6,SG7,SG8,SG9,AG1,AG2,AG3,AG4,AG5,AG6,DG1,DG2,DG3,DG4,DG5,DG6,DG7 condition;
 ```
 
 ## 8) Deployment/build packaging view
@@ -299,8 +481,12 @@ flowchart TD
     C1 --> F2[lambda_file_data_ingestor]
     C1 --> F3[lambda_statement_validator]
     C1 --> F4[lambda_statement_request_submitter]
-    C1 --> F5[lambda_opentextresponseupdater]
-    C1 --> F6[lambda_extract_files_*_report]
+    C1 --> F5[lambda_assignment_letter_validator]
+    C1 --> F6[lambda_assignment_letter_request_submitter]
+    C1 --> F7[lambda_dunning_letter_validator]
+    C1 --> F8[lambda_dunning_letter_request_submitter]
+    C1 --> F9[lambda_opentextresponseupdater]
+    C1 --> F10[lambda_extract_files_*_report]
 
     C2 --> L1[external_packages layer]
     C2 --> L2[repositories layer]
@@ -316,7 +502,7 @@ flowchart TD
     class A cfg;
     class B,C1,C2 process;
     class D output;
-    class F1,F2,F3,F4,F5,F6,L1,L2,L3,L4,L5 target;
+    class F1,F2,F3,F4,F5,F6,F7,F8,F9,F10,L1,L2,L3,L4,L5 target;
 ```
 
 ## 9) Key architectural observations
@@ -324,7 +510,8 @@ flowchart TD
 2. The domain flow is **batch-oriented** (daily extract files and run/submission IDs).
 3. Data access is centralized through `Database` + repository classes.
 4. Validation logic is modeled as **chain-of-responsibility**, allowing condition ordering via config.
-5. OpenText integration is asynchronous from ingestion, improving throughput and fault isolation.
+5. OpenText integration is asynchronous from ingestion across statement, assignment, and dunning tracks, improving throughput and fault isolation.
+6. `opentextresponseupdater` routes updates by `document_type` to statement, assignment, and dunning response services.
 
 ## 10) Failure mode sequences
 
@@ -661,3 +848,138 @@ flowchart LR
 - `DebtorEmail` is a non-blocking condition (log and continue).
 - `InpaymentDetails` and `CreditControllerDetails` are blocking conditions (log and stop).
 - `AssignmentDue` false is a silent stop (no log), per DSS-491 acceptance criteria.
+
+## 15) Dunning letter generation architecture
+
+### 15.1 Dunning letter flow diagram
+```mermaid
+flowchart TD
+  A[Both Debtor + Transaction files processed and valid] --> B[FileProcessedService]
+
+  B --> C[DunningLetterOrchestrationService]
+  C --> D[(SQS Dunning Orchestrator Queue)]
+
+  D --> E[Lambda dunninglettervalidator]
+  E --> F[DunningLetterValidationService]
+
+  F --> G{Condition chain per IPR}
+  G --> G1[DunningAlreadyRequestedToday]
+  G1 --> G2[DunningFlag]
+  G2 --> G3[DunningCycleCode]
+  G3 --> G4[AccountBalance]
+  G4 --> G5[CreditControllerDetails]
+  G5 --> G6[DebtorEmail]
+  G6 --> G7[RequestDunningLetter]
+
+  F --> H[(PostgreSQL\ndunning_letter_validation)]
+  F --> I[(PostgreSQL\ndunning_letter + dunning_letter_request)]
+  F --> J[(SQS Dunning Requests Queue)]
+
+  J --> K[Lambda dunningletterrequestsubmitter]
+  K --> L[DunningLetterSubmissionService]
+  L --> M[(OpenText APIs)]
+  L --> I
+
+  N[DunningFlag = 0] -.silent stop.-> G
+  O[Invalid flag/cycle, non-positive balance, missing credit controller] -.log and stop.-> H
+  P[Missing Debtor Email] -.log and continue.-> G7
+
+  classDef service fill:#CCFBF1,stroke:#0F766E,color:#111827,stroke-width:1.5px;
+  classDef queue fill:#FEF3C7,stroke:#D97706,color:#111827,stroke-width:1.5px;
+  classDef lambda fill:#EDE9FE,stroke:#7C3AED,color:#111827,stroke-width:1.5px;
+  classDef data fill:#DCFCE7,stroke:#15803D,color:#111827,stroke-width:1.5px;
+  classDef integration fill:#FCE7F3,stroke:#BE185D,color:#111827,stroke-width:1.5px;
+  classDef note fill:#F3F4F6,stroke:#6B7280,color:#111827,stroke-dasharray: 5 5;
+
+  class B,C,F,G,G1,G2,G3,G4,G5,G6,G7,L service;
+  class D,J queue;
+  class E,K lambda;
+  class H,I data;
+  class M integration;
+  class N,O,P note;
+```
+
+### 15.2 Dunning letter component diagram
+```mermaid
+flowchart LR
+  subgraph Triggers
+    T1[FileProcessedService]
+  end
+
+  subgraph DunningLetterLambdas
+    L1[lambda_dunning_letter_validator]
+    L2[lambda_dunning_letter_request_submitter]
+  end
+
+  subgraph DunningLetterServices
+    S1[DunningLetterOrchestrationService]
+    S2[DunningLetterValidationService]
+    S3[DunningLetterSubmissionService]
+    S4[DunningLetterGenerationHandler chain]
+  end
+
+  subgraph DunningLetterRepositories
+    R1[DunningLetterRepository]
+    R2[DunningLetterValidationRepository]
+    R3[DunningLetterRequestRepository]
+    R4[DebtorRepository]
+  end
+
+  subgraph Messaging
+    Q1[(SQS Dunning Orchestrator Queue)]
+    Q2[(SQS Dunning Requests Queue)]
+  end
+
+  subgraph DataStores
+    D1[(PostgreSQL\ndunning_letter)]
+    D2[(PostgreSQL\ndunning_letter_validation)]
+    D3[(PostgreSQL\ndunning_letter_request)]
+  end
+
+  subgraph External
+    X1[(OpenText APIs)]
+    X2[(AWS Secrets Manager)]
+  end
+
+  T1 --> S1
+  S1 --> R4
+  S1 --> Q1
+
+  Q1 --> L1
+  L1 --> S2
+  S2 --> S4
+  S2 --> R4
+  S2 --> R1
+  S2 --> R2
+  S2 --> R3
+  S2 --> Q2
+
+  Q2 --> L2
+  L2 --> S3
+  S3 --> R1
+  S3 --> R3
+  S3 --> X1
+  S3 --> X2
+
+  R1 --> D1
+  R2 --> D2
+  R3 --> D3
+
+  classDef comp fill:#CCFBF1,stroke:#0F766E,color:#111827,stroke-width:1.5px;
+  classDef lambda fill:#EDE9FE,stroke:#7C3AED,color:#111827,stroke-width:1.5px;
+  classDef queue fill:#FEF3C7,stroke:#D97706,color:#111827,stroke-width:1.5px;
+  classDef data fill:#DCFCE7,stroke:#15803D,color:#111827,stroke-width:1.5px;
+  classDef ext fill:#FCE7F3,stroke:#BE185D,color:#111827,stroke-width:1.5px;
+
+  class T1,S1,S2,S3,S4,R1,R2,R3,R4 comp;
+  class L1,L2 lambda;
+  class Q1,Q2 queue;
+  class D1,D2,D3 data;
+  class X1,X2 ext;
+```
+
+### 15.3 Notes
+- Dunning letters are processed independently from statement and assignment flows.
+- `DunningFlag = 0` is a silent stop (no log).
+- Invalid dunning flag/cycle, non-positive account balance, or missing credit controller are blocking conditions (log and stop).
+- `DebtorEmail` is a non-blocking condition (log and continue).

@@ -378,24 +378,7 @@ Simple flow summary:
 11. A submitter lambda per track reads requests and submits payloads to OpenText.
 12. OpenText returns responses, and each submitter writes submission status back to PostgreSQL.
 
-## 7. Assignment and Dunning Flows
-- Assignment flow:
-  - assignment-orchestrator queue triggers lambda_assignment_letter_validator
-  - AssignmentLetterValidationService validates eligibility and logs outcomes
-  - Validated requests are sent to assignment-requests queue
-  - lambda_assignment_letter_request_submitter submits to OpenText and persists results
-- Dunning flow:
-  - dunning-orchestrator queue triggers lambda_dunning_letter_orchestrator
-  - DunningLetterValidationService validates eligibility and logs outcomes
-  - Validated requests are sent to dunning-requests queue
-  - lambda_dunning_letter_request_submitter submits to OpenText and persists results
-
-Both flows reuse common design patterns:
-- Chain-of-responsibility for condition checks
-- Repository persistence for request/validation state
-- Queue-based decoupling between validation and submission stages
-
-## 8. Lambda and Queue Inventory
+## 7. Lambda and Queue Inventory
 The following runtime resources are included in this design.
 
 Lambdas:
@@ -432,7 +415,7 @@ Queues:
 - cbif-r-euw2-sqs-dss-dunnings-01
 - cbif-r-euw2-sqs-dss-dunnings-01-dead-letter
 
-## 9. Data and State Management
+## 8. Data and State Management
 - Primary datastore: PostgreSQL
 - State entities include:
   - RunControl and RunBatch for processing lifecycle
@@ -444,7 +427,7 @@ Queues:
   - Record-level checks isolate invalid items
   - Per-IPR outcomes are logged and persisted
 
-## 10. Deployment View
+## 9. Deployment View
 - Packaging and deployment configuration is defined in deployment/deployment.config.json
 - Codebase is organized so common modules can be packaged as layers:
   - repositories
@@ -454,19 +437,19 @@ Queues:
 - Runtime target: Python 3.11 Lambda functions and layers
 - Local execution and integration testing rely on LocalStack and local Postgres setup
 
-## 11. Security and Compliance Design
+## 10. Security and Compliance Design
 - Secret material and endpoint details are resolved via configuration and secrets abstraction
 - Sensitive integration credentials are externalized (not hardcoded in service flow)
 - Service-to-service communication uses AWS managed channels (SQS/EventBridge)
 - Validation and processing logs provide business traceability for audit support
 
-## 12. Reliability and Scalability Design
+## 11. Reliability and Scalability Design
 - Asynchronous queue boundaries allow horizontal scaling of processing stages
 - Idempotent-style upsert patterns reduce duplicate processing impact
 - Segmented lambdas isolate failures to a processing stage
 - Scheduled reporting gives operational visibility into lag/backlog states
 
-## 13. Observability Design
+## 12. Observability Design
 - Current observability includes log outputs and persistence of validation/report states
 - Recommended operational baselines:
   - Queue depth alarms per queue
@@ -474,18 +457,18 @@ Queues:
   - DB connection and failed transaction monitoring
   - End-to-end SLA metrics from file arrival to final update
 
-## 14. Known Design Risks
+## 13. Known Design Risks
 - Full table replacement patterns in some ingestion paths can increase data-loss risk during partial failures
 - Broad exception handling in selected modules can hide root causes
 - Unit test coverage is currently narrow compared to system breadth
 
-## 15. HLD Decision Summary
+## 14. HLD Decision Summary
 - Event-driven asynchronous architecture is retained as the core system pattern
 - Layered service and repository model is retained for maintainability
 - Validation chain handlers are retained for business-rule extensibility
 - Next iteration should prioritize resilience hardening and broader automated test coverage
 
-## 16. References
+## 15. References
 - src/diagrams/architecture.md
 - src/deployment/deployment.config.json
 - src/services
