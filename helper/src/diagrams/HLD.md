@@ -27,15 +27,6 @@ The solution follows a layered, event-driven architecture:
 
 ## 4. System Context
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {
-'primaryColor': '#e8f1ff',
-'primaryTextColor': '#0b1f3a',
-'primaryBorderColor': '#3b82f6',
-'lineColor': '#5b6b81',
-'secondaryColor': '#e6fffb',
-'tertiaryColor': '#fff4e6',
-'fontFamily': 'Segoe UI'
-}}}%%
 flowchart LR
     S3[(Amazon S3 Extract Files)] --> L1[Lambda filedataingestor]
   L1 --> SNS1[SNS File Received Notification]
@@ -87,7 +78,7 @@ flowchart LR
     Q3 --> L6[Lambda opentextresponseupdater]
     Q4 --> L6
     Q5 --> L6
-    L6 --> RS[Response Services<br/>StatementResponseService<br/>AssignmentLetterResponseService<br/>DunningLetterResponseService]
+    L6 --> RS[Response Services\nStatementResponseService\nAssignmentLetterResponseService\nDunningLetterResponseService]
     RS --> DB
     RPT1 --> SES[(SES)]
     RPT2 --> SES
@@ -107,15 +98,6 @@ flowchart LR
 
 ## 5. Logical Component View
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {
-'primaryColor': '#e8f1ff',
-'primaryTextColor': '#0b1f3a',
-'primaryBorderColor': '#3b82f6',
-'lineColor': '#5b6b81',
-'secondaryColor': '#e6fffb',
-'tertiaryColor': '#fff4e6',
-'fontFamily': 'Segoe UI'
-}}}%%
 flowchart TB
     subgraph E[Lambda Entrypoints]
       L1[filedataingestor]
@@ -306,31 +288,6 @@ flowchart TB
 
 ## 6. Primary Runtime Flow (Statement, Assignment, and Dunning)
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {
-'fontFamily': 'Segoe UI',
-'primaryColor': '#eef4ff',
-'primaryTextColor': '#0f172a',
-'primaryBorderColor': '#4f46e5',
-'secondaryColor': '#ecfeff',
-'secondaryTextColor': '#0f172a',
-'secondaryBorderColor': '#06b6d4',
-'tertiaryColor': '#f0fdf4',
-'tertiaryTextColor': '#0f172a',
-'tertiaryBorderColor': '#22c55e',
-'lineColor': '#64748b',
-'signalColor': '#334155',
-'signalTextColor': '#0f172a',
-'labelBoxBkgColor': '#e2e8f0',
-'labelBoxBorderColor': '#94a3b8',
-'labelTextColor': '#0f172a',
-'actorBkg': '#e0e7ff',
-'actorBorder': '#4f46e5',
-'actorTextColor': '#0f172a',
-'activationBorderColor': '#14b8a6',
-'activationBkgColor': '#ccfbf1',
-'noteBkgColor': '#fff7ed',
-'noteBorderColor': '#fb923c'
-}}}%%
 sequenceDiagram
     participant S3 as S3
     participant Ingest as filedataingestor
