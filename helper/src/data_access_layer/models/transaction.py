@@ -10,6 +10,11 @@ from .model import ModelBase
 @dataclass
 class Transaction(ModelBase):
     __tablename__ = "transaction"
+    __allow_unmapped__ = True
+
+    # Transient metadata used during record validation; not persisted in DB.
+    _raw_line: str | None = None
+    _raw_line_length: int | None = None
 
     RunId: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True))
     IPR: Mapped[str] = mapped_column(String(26))
