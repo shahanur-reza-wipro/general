@@ -164,6 +164,32 @@ class Database:
         """Drop all tables based on models."""
         ModelBase.metadata.drop_all(self.engine)
 
+    def drop_table(
+        self,
+        table_name: str,
+        schema: Optional[str] = None,
+        cascade: bool = False,
+    ) -> bool:
+        """Drop a single table by name and return whether it existed."""
+        target_schema = schema or "public"
+        inspector = inspect(self.engine)
+
+        if not inspector.has_table(table_name, schema=target_schema):
+            return False
+
+        safe_schema = target_schema.replace('"', '""')
+        safe_table_name = table_name.replace('"', '""')
+        cascade_sql = " CASCADE" if cascade else ""
+
+        with self.engine.begin() as conn:
+            conn.execute(
+                text(
+                    f'DROP TABLE "{safe_schema}"."{safe_table_name}"{cascade_sql}'
+                )
+            )
+
+        return True
+
     def drop_tables_recreate(self):
         """Drop all tables and recreate the schema."""
         with self.engine.connect() as conn:
