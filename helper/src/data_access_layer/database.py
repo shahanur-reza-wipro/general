@@ -8,6 +8,7 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.dialects.postgresql import Insert
 from sqlalchemy.orm.session import object_session
+from sqlalchemy.schema import CreateColumn
 
 from .models import ModelBase
 from utilities import SecretManager, Configuration, Utility
@@ -110,6 +111,54 @@ class Database:
     def create_tables(self):
         """Create all database tables based on models."""
         ModelBase.metadata.create_all(self.engine)
+
+    def alter_table_add_missing_columns(
+        self,
+        table_name: str,
+        model: Type[DeclarativeMeta],
+        schema: Optional[str] = None,
+    ) -> List[str]:
+        """
+        Alter an existing table by adding columns that exist in the model but not in the table.
+
+        :param table_name: Name of the existing table to alter.
+        :param model: SQLAlchemy model class used as the source of truth for columns.
+        :param schema: Optional schema name. Uses model schema or 'public' by default.
+        :return: List of column names that were added.
+        """
+        model_table = model.__table__
+        target_schema = schema or model_table.schema or "public"
+
+        inspector = inspect(self.engine)
+        if table_name not in inspector.get_table_names(schema=target_schema):
+            raise ValueError(
+                f"Table '{target_schema}.{table_name}' does not exist. "
+                "Create the table before altering it."
+            )
+
+        existing_columns = {
+            column["name"]
+            for column in inspector.get_columns(table_name, schema=target_schema)
+        }
+        added_columns = []
+
+        with self.engine.begin() as conn:
+            for column in model_table.columns:
+                if column.name in existing_columns or column.primary_key:
+                    continue
+
+                column_definition = str(
+                    CreateColumn(column).compile(dialect=self.engine.dialect)
+                )
+                conn.execute(
+                    text(
+                        f'ALTER TABLE "{target_schema}"."{table_name}" '
+                        f"ADD COLUMN {column_definition}"
+                    )
+                )
+                added_columns.append(column.name)
+
+        return added_columns
 
     def drop_tables(self):
         """Drop all tables based on models."""
