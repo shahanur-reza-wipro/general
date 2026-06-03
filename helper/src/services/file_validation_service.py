@@ -70,8 +70,8 @@ class FileValidationService:
 
         file_validation_info = FileValidationInfo(
             filename=file_name,
-            application_date=Utility.convert_to_date(model.get("ApplicationDate")) if model else None,
-            extract_date=Utility.convert_to_date(model.get("ExtractDate")) if model else None,
+            application_date=Utility.normalize_date(model.get("ApplicationDate")) if model else None,
+            extract_date=Utility.normalize_date(model.get("ExtractDate")) if model else None,
             model_name=model_name,
             first_record_end_field=model.get("EndField") if model else None,
             first_record_raw_line=model.get("_raw_line") if model else None,
@@ -101,8 +101,11 @@ class FileValidationService:
                 else run_control.IsValidTransactionFile
             )
 
-            run_control.ApplicationDate = file_validation_info.application_date
-            run_control.ExtractDate = file_validation_info.extract_date
+            if file_validation_info.application_date is not None:
+                run_control.ApplicationDate = file_validation_info.application_date
+
+            if file_validation_info.extract_date is not None:
+                run_control.ExtractDate = file_validation_info.extract_date
 
             run_control = self.run_control_repository.upsert(run_control)
 
