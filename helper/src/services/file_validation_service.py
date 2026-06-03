@@ -70,8 +70,12 @@ class FileValidationService:
 
         file_validation_info = FileValidationInfo(
             filename=file_name,
-            application_date=Utility.convert_to_date(model["ApplicationDate"]),
-            extract_date=Utility.convert_to_date(model["ExtractDate"]),
+            application_date=Utility.convert_to_date(model.get("ApplicationDate")) if model else None,
+            extract_date=Utility.convert_to_date(model.get("ExtractDate")) if model else None,
+            model_name=model_name,
+            first_record_end_field=model.get("EndField") if model else None,
+            first_record_raw_line=model.get("_raw_line") if model else None,
+            first_record_raw_line_length=model.get("_raw_line_length") if model else None,
         )
 
         is_valid_file = self.file_validator.validate(

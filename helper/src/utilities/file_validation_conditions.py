@@ -9,6 +9,7 @@ class FileValidationCondition:
 class FileValidationConditions:
     FILENAME_AND_FILETYPE = "FilenameAndType"
     FILE_PROCESSED = "FileProcessed"
+    FIRST_RECORD_ENDS_WITH_X = "FirstRecordEndsWithX"
     APPLICATION_DATE = "ApplicationDate"
     EXTRACT_DATE = "ExtractDate"
     CONDITION_JSON_FILE = "file_validation_conditions.json"

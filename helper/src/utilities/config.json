@@ -52,6 +52,7 @@
   "fileValidationConditions": [
     "FileProcessed",
     "FilenameAndType",
+    "FirstRecordEndsWithX",
     "ApplicationDate",
     "ExtractDate"
   ],

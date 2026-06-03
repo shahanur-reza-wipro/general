@@ -47,6 +47,43 @@ class Utility:
         return data
 
     @staticmethod
+    def normalize_date(value):
+        if value is None:
+            return None
+
+        if isinstance(value, datetime):
+            return value.date()
+
+        if isinstance(value, date):
+            return value
+
+        parsed_date = Utility.convert_to_date(value)
+        if isinstance(parsed_date, datetime):
+            return parsed_date.date()
+
+        return parsed_date if isinstance(parsed_date, date) else None
+
+    @staticmethod
+    def get_end_field_position(model_name, schema_manager=None):
+        if not model_name:
+            return None
+
+        manager = schema_manager
+        if manager is None:
+            from .schema_manager import SchemaManager
+            manager = SchemaManager()
+
+        schema = manager.get_schema_by_model_name(model_name)
+        if not schema:
+            return None
+
+        for field in schema.fields:
+            if field.modelProperty == "EndField":
+                return field.start + field.length - 1
+
+        return None
+
+    @staticmethod
     def chunk_data(data, chunk_size=1000):
         for i in range(0, len(data), chunk_size):
             yield data[i : i + chunk_size]

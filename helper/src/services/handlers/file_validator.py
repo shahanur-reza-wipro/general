@@ -2,6 +2,7 @@ from utilities import Configuration
 from .file_validation_handler import (
     FilenameAndTypeHandler,
     FileProcessedHandler,
+    FirstRecordEndsWithXHandler,
     ApplicationDateHandler,
     ExtractDateHandler,
 )
@@ -10,6 +11,7 @@ class FileValidator:
     HANDLED_MAP = {
         "FilenameAndType": FilenameAndTypeHandler,
         "FileProcessed": FileProcessedHandler,
+        "FirstRecordEndsWithX": FirstRecordEndsWithXHandler,
         "ApplicationDate": ApplicationDateHandler,
         "ExtractDate": ExtractDateHandler,
     }

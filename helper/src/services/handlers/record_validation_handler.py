@@ -1,7 +1,7 @@
 from datetime import date, datetime
 import json
 from sqlalchemy import Boolean, Date, Numeric, String, inspect
-from utilities import SchemaManager, RecordCondition, RecordConditions
+from utilities import SchemaManager, RecordCondition, RecordConditions, Utility
 from data_access_layer.models import DebtorRecordValidation, TransactionRecordValidation
 from repositories import DebtorRecordValidationRepository, TransactionRecordValidationRepository
 
@@ -46,16 +46,6 @@ class RecordConditionGenerationHandler:
         log_id = self.logging_repository.add(log)
         return str(log_id)
 
-    def get_end_field_position(self, record):
-        schema = self._schema_manager.get_schema_by_model_name(type(record).__name__)
-        if not schema:
-            return None
-
-        for field in schema.fields:
-            if field.modelProperty == "EndField":
-                return field.start + field.length - 1
-        return None
-
 class CheckInvalidIPRHandler(RecordConditionGenerationHandler):
     def handle(self, record, record_validation_info, validation_logger, invalid_iprs):
         if '' in [record.ClientNumber, record.ClientAgreementNumber, record.DebtorNumber, record.AccountNumber]:
@@ -68,7 +58,10 @@ class CheckInvalidIPRHandler(RecordConditionGenerationHandler):
 
 class EndWithXHandler(RecordConditionGenerationHandler):
     def handle(self, record, record_validation_info, validation_logger, invalid_iprs):
-        expected_end_position = self.get_end_field_position(record)
+        expected_end_position = Utility.get_end_field_position(
+            type(record).__name__,
+            self._schema_manager,
+        )
         raw_line = getattr(record, "_raw_line", None)
         raw_line_length = getattr(record, "_raw_line_length", None)
 

@@ -2,7 +2,7 @@ from datetime import datetime
 from data_access_layer.models import DebtorFileValidation, TransactionFileValidation
 from services.file_service import FileService
 from services.handlers.file_validation_info import FileValidationInfo
-from utilities import FileValidationConditions, FileValidationCondition
+from utilities import FileValidationConditions, FileValidationCondition, Utility
 from repositories import RunControlRepository, DebtorFileValidationRepository, TransactionFileValidationRepository
 from utilities import FixedLengthFileReader
 from utilities import SchemaManager, Configuration
@@ -54,6 +54,10 @@ class FileValidationHandler:
         return str(log_id)
 
     def compare_dates(self, file_date):
+        file_date = Utility.normalize_date(file_date)
+        if file_date is None:
+            return False
+
         today_date = datetime.today().date()
         if file_date == today_date:
             is_matched = True
@@ -107,6 +111,45 @@ class FileProcessedHandler(FileValidationHandler):
             return False
         else:
             return super().handle(file_validation_info, validation_logger)
+
+
+class FirstRecordEndsWithXHandler(FileValidationHandler):
+
+    def handle(self, file_validation_info: FileValidationInfo, validation_logger):
+        expected_end_position = Utility.get_end_field_position(
+            file_validation_info.model_name,
+            self.schema_manager,
+        )
+        raw_line = file_validation_info.first_record_raw_line
+        raw_line_length = file_validation_info.first_record_raw_line_length
+        end_field = (file_validation_info.first_record_end_field or "").strip()
+
+        has_valid_end_value = end_field == "X"
+        has_valid_end_position = False
+
+        if expected_end_position is not None and raw_line_length is not None:
+            has_valid_end_position = raw_line_length == expected_end_position
+
+        if expected_end_position is not None and raw_line is not None:
+            has_expected_char_position = len(raw_line) >= expected_end_position
+            has_valid_end_position = (
+                has_valid_end_position
+                and has_expected_char_position
+                and raw_line[expected_end_position - 1] == "X"
+            )
+
+        if not has_valid_end_value or not has_valid_end_position:
+            file_validation_condition = self.file_validation_conditions.get_condition(
+                FileValidationConditions.FIRST_RECORD_ENDS_WITH_X
+            )
+            super().log_file_validation_operation(
+                file_validation_info,
+                file_validation_condition,
+                validation_logger
+            )
+            return False
+
+        return super().handle(file_validation_info, validation_logger)
         
     
 class ApplicationDateHandler(FileValidationHandler):
