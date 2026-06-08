@@ -29,6 +29,7 @@
   ],
   "assignmentLetterGenerationConditions": [
     "AssignmentAlreadyRequestedToday",
+    "HasValidTransactions",
     "InpaymentDetails",
     "AssignmentDue",
     "CreditControllerDetails",
@@ -37,6 +38,7 @@
   ],
   "dunningLetterGenerationConditions": [
     "DunningAlreadyRequestedToday",
+    "HasValidTransactions",
     "DunningFlag",
     "DunningCycleCode",
     "AccountBalance",

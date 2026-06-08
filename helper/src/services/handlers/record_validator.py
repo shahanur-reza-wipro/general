@@ -8,7 +8,7 @@ from itertools import groupby
 
 class RecordValidator:
     HANDLED_MAP = {
-        "EndWithX": EndWithXHandler,
+        "EndsWithX": EndWithXHandler,
         "FieldFormat": FieldFormatHandler,
         "CheckInvalidIPR": CheckInvalidIPRHandler,
     }

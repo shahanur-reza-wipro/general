@@ -11,6 +11,7 @@ class AssignmentLetterCondition:
 
 class AssignmentLetterConditions:
     ASSIGNMENT_ALREADY_REQUESTED_TODAY = "AssignmentAlreadyRequestedToday"
+    HAS_VALID_TRANSACTIONS = "HasValidTransactions"
     INPAYMENT_DETAILS = "InpaymentDetails"
     ASSIGNMENT_DUE = "AssignmentDue"
     CREDIT_CONTROLLER_DETAILS = "CreditControllerDetails"

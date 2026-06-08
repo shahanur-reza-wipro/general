@@ -6,6 +6,11 @@
       "description": "Prevent duplicate assignment letters for the same IPR on the same day."
     },
     {
+      "name": "HasValidTransactions",
+      "logMessage": "No Valid Transactions",
+      "description": "Debtor must have at least one valid transaction available for letter generation."
+    },
+    {
       "name": "InpaymentDetails",
       "logMessage": "Missing In-Payment Details",
       "description": "In Payment Bank Code, Bank Account and IBAN must all be present."

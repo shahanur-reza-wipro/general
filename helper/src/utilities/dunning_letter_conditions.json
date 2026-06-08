@@ -6,6 +6,11 @@
       "description": "Prevent duplicate dunning letters for the same IPR on the same day."
     },
     {
+      "name": "HasValidTransactions",
+      "logMessage": "No Valid Transactions",
+      "description": "Debtor must have at least one valid transaction available for letter generation."
+    },
+    {
       "name": "DunningFlag",
       "logMessage": "",
       "description": "Dunning Reminder flag must be 1, 2, or 3. If flag is 0, no processing and no log."

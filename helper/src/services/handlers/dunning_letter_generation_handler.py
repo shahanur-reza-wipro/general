@@ -68,6 +68,17 @@ class DunningAlreadyRequestedTodayHandler(DunningLetterGenerationHandler):
         return super().handle(debtor)
 
 
+class HasValidTransactionsHandler(DunningLetterGenerationHandler):
+    def handle(self, debtor: Debtor):
+        transactions = debtor.Transactions or []
+
+        if not transactions:
+            self.log_condition(debtor, DunningLetterConditions.HAS_VALID_TRANSACTIONS)
+            return False
+
+        return super().handle(debtor)
+
+
 class DunningFlagHandler(DunningLetterGenerationHandler):
     def handle(self, debtor: Debtor):
         dunning_flag = (
@@ -142,6 +153,7 @@ class RequestDunningLetterHandler(DunningLetterGenerationHandler):
 
 DunningLetterGenerationHandler.HANDLER_MAP = {
     "DunningAlreadyRequestedToday": DunningAlreadyRequestedTodayHandler,
+    "HasValidTransactions": HasValidTransactionsHandler,
     "DunningFlag": DunningFlagHandler,
     "DunningCycleCode": DunningCycleCodeHandler,
     "AccountBalance": DunningAccountBalanceHandler,

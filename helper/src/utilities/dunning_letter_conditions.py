@@ -10,6 +10,7 @@ class DunningLetterCondition:
 
 class DunningLetterConditions:
     DUNNING_ALREADY_REQUESTED_TODAY = "DunningAlreadyRequestedToday"
+    HAS_VALID_TRANSACTIONS = "HasValidTransactions"
     DUNNING_FLAG = "DunningFlag"
     DUNNING_CYCLE_CODE = "DunningCycleCode"
     ACCOUNT_BALANCE = "AccountBalance"

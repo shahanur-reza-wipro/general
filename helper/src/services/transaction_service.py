@@ -60,13 +60,9 @@ class TransactionService:
             transaction_records = FileService().get_records(file_object, "Transaction")
             # validate and save transactions
             transactions = self.get_transactions(transaction_records, run_id)
-            if self.configuration.isLocal:
-                validated_transactions = transactions
-                invalid_iprs = []
-            else:
-                validated_transactions, invalid_iprs = self.record_validation_service.validate_transactions(
-                    transactions, run_id, file_name
-                )
+            validated_transactions, invalid_iprs = self.record_validation_service.validate_transactions(
+                transactions, run_id, file_name
+            )
             validated_transactions.sort(
                 key=lambda transaction: transaction.IPR if transaction is not None else ""
             )

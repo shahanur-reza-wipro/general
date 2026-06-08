@@ -83,6 +83,19 @@ class AssignmentAlreadyRequestedTodayHandler(AssignmentLetterGenerationHandler):
         return super().handle(debtor)
 
 
+class HasValidTransactionsHandler(AssignmentLetterGenerationHandler):
+    """Stop + log when debtor has no valid transactions for letter generation."""
+
+    def handle(self, debtor: Debtor):
+        transactions = debtor.Transactions or []
+
+        if not transactions:
+            self.log_condition(debtor, AssignmentLetterConditions.HAS_VALID_TRANSACTIONS)
+            return False
+
+        return super().handle(debtor)
+
+
 class AssignmentLetterInpaymentDetailsHandler(AssignmentLetterGenerationHandler):
     """Stop + log if any in-payment field is blank."""
 
@@ -144,6 +157,7 @@ class RequestAssignmentLetterHandler(AssignmentLetterGenerationHandler):
 
 AssignmentLetterGenerationHandler.HANDLER_MAP = {
     "AssignmentAlreadyRequestedToday": AssignmentAlreadyRequestedTodayHandler,
+    "HasValidTransactions": HasValidTransactionsHandler,
     "InpaymentDetails": AssignmentLetterInpaymentDetailsHandler,
     "AssignmentDue": AssignmentDueHandler,
     "CreditControllerDetails": AssignmentLetterCreditControllerHandler,
