@@ -21,9 +21,9 @@
       "description": "Cycle code must be one of 5200, 5201, 5202 for OpenText dynamic content."
     },
     {
-      "name": "AccountBalance",
-      "logMessage": "Account Balance is 0",
-      "description": "Dunning letter only required where account balance is greater than zero."
+      "name": "OverdueAccountBalance",
+      "logMessage": "No Overdue and Not Disputed open item exists",
+      "description": "Dunning letter is only required where at least one overdue and not disputed open transaction item exists for the IPR."
     },
     {
       "name": "CreditControllerDetails",

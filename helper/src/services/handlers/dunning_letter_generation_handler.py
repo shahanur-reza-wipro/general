@@ -115,11 +115,21 @@ class DunningCycleCodeHandler(DunningLetterGenerationHandler):
         return super().handle(debtor)
 
 
-class DunningAccountBalanceHandler(DunningLetterGenerationHandler):
+class DunningOverdueAccountBalanceHandler(DunningLetterGenerationHandler):
     def handle(self, debtor: Debtor):
-        account_balance = float(getattr(debtor, "CustomerAccountBalance", 0) or 0)
-        if account_balance <= 0:
-            self.log_condition(debtor, DunningLetterConditions.ACCOUNT_BALANCE)
+        transactions = debtor.Transactions or []
+        has_overdue_non_disputed_open_item = any(
+            bool(getattr(transaction, "Overdue", False))
+            and not bool(getattr(transaction, "Disputed", False))
+            for transaction in transactions
+        )
+
+        if not has_overdue_non_disputed_open_item:
+            self.log_condition(
+                debtor,
+                DunningLetterConditions.OVERDUE_ACCOUNT_BALANCE,
+                override_message="No Overdue and Not Disputed open item exists",
+            )
             return False
         return super().handle(debtor)
 
@@ -156,7 +166,7 @@ DunningLetterGenerationHandler.HANDLER_MAP = {
     "HasValidTransactions": HasValidTransactionsHandler,
     "DunningFlag": DunningFlagHandler,
     "DunningCycleCode": DunningCycleCodeHandler,
-    "AccountBalance": DunningAccountBalanceHandler,
+    "OverdueAccountBalance": DunningOverdueAccountBalanceHandler,
     "CreditControllerDetails": DunningCreditControllerHandler,
     "DebtorEmail": DunningDebtorEmailHandler,
     "RequestDunningLetter": RequestDunningLetterHandler,

@@ -41,7 +41,7 @@
     "HasValidTransactions",
     "DunningFlag",
     "DunningCycleCode",
-    "AccountBalance",
+    "OverdueAccountBalance",
     "CreditControllerDetails",
     "DebtorEmail",
     "RequestDunningLetter"

@@ -13,7 +13,7 @@ class DunningLetterConditions:
     HAS_VALID_TRANSACTIONS = "HasValidTransactions"
     DUNNING_FLAG = "DunningFlag"
     DUNNING_CYCLE_CODE = "DunningCycleCode"
-    ACCOUNT_BALANCE = "AccountBalance"
+    OVERDUE_ACCOUNT_BALANCE = "OverdueAccountBalance"
     CREDIT_CONTROLLER_DETAILS = "CreditControllerDetails"
     DEBTOR_EMAIL = "DebtorEmail"
     REQUEST_DUNNING_LETTER = "RequestDunningLetter"
