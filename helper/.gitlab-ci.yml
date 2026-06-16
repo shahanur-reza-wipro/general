@@ -12,7 +12,7 @@ download-urllib3:
   image: python:3.11-slim
   script:
     - mkdir -p packages
-    - pip download urllib3 --no-deps -d packages/
+    - pip download urllib3 --no-binary=:all: -d packages/
     - echo "Downloaded packages:"
     - ls -lh packages/
   artifacts:
