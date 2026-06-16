@@ -9,7 +9,7 @@ stages:
 
 download-urllib3:
   stage: package
-  image: python:3.12-slim
+  image: python:3.11-slim
   script:
     - mkdir -p packages
     - pip download urllib3 --no-deps -d packages/
